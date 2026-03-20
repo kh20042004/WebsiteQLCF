@@ -30,6 +30,11 @@ app.use(express.json());
 // Middleware: Parse URL-encoded data
 app.use(express.urlencoded({ extended: true }));
 
+// ---- SERVICE STATIC FILES (Ảnh sản phẩm) ----
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+
 // ---- KẾT NỐI DATABASE ----
 connectDB();
 

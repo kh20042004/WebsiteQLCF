@@ -75,7 +75,17 @@ const createItem = async (req, res, next) => {
       });
     }
 
-    const newItem = await Item.create(req.body);
+    // --- Xử lý logic upload ảnh ---
+    const itemData = req.body;
+    
+    // Nếu có file upload từ Multer (req.file)
+    if (req.file) {
+      // Lưu địa chỉ URL của ảnh thật trên server
+      itemData.image = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    }
+    
+    // Tạo sản phẩm mới
+    const newItem = await Item.create(itemData);
 
     res.status(201).json({
       status: true,
@@ -103,7 +113,24 @@ const updateItem = async (req, res, next) => {
       }
     }
 
-    const item = await Item.findByIdAndUpdate(req.params.id, req.body, {
+    // --- Xử lý logic cập nhật ảnh ---
+    const updateData = req.body;
+
+    // Debug dữ liệu nhận được (Xóa sau khi fix xong)
+    console.log('Update Data received:', updateData);
+    console.log('File received:', req.file);
+
+    // Nếu có file mới được upload từ Multer
+    if (req.file) {
+      updateData.image = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    } else {
+      // Nếu KHÔNG có file mới, đảm bảo không lưu Object trống {} vào trường image
+      if (typeof updateData.image === 'object' || updateData.image === '{}' || updateData.image === '[object Object]') {
+        delete updateData.image;
+      }
+    }
+
+    const item = await Item.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });

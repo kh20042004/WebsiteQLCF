@@ -1,28 +1,42 @@
 import api from './api';
 
 /**
- * Category Service - All API calls for category management
- * Integrates with backend endpoints: http://localhost:3000/api/categories
+ * Service quản lý Menu Categories (Danh mục)
  */
-
-export const categoryService = {
+const categoryService = {
   /**
-   * GET /api/categories
-   * Lấy danh sách danh mục
-   * @returns {Promise<Array>} Danh sách danh mục
+   * Lấy tất cả danh mục
    */
-  getAllCategories: () => {
-    return api.get('/categories');
+  getAllCategories: async (params = {}) => {
+    return api.get('/categories', { params });
   },
 
   /**
-   * POST /api/categories
-   * Tạo danh mục mới
-   * @param {Object} categoryData - { name, description }
-   * @returns {Promise<Object>} Danh mục vừa tạo
+   * Lấy danh mục theo ID
    */
-  createCategory: (categoryData) => {
+  getCategoryById: async (id) => {
+    return api.get(`/categories/${id}`);
+  },
+
+  /**
+   * Tạo mới danh mục
+   */
+  createCategory: async (categoryData) => {
     return api.post('/categories', categoryData);
+  },
+
+  /**
+   * Cập nhật danh mục
+   */
+  updateCategory: async (id, categoryData) => {
+    return api.put(`/categories/${id}`, categoryData);
+  },
+
+  /**
+   * Xóa danh mục
+   */
+  deleteCategory: async (id) => {
+    return api.delete(`/categories/${id}`);
   }
 };
 

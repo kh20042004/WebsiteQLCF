@@ -1,222 +1,195 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Icon } from '@iconify/react';
-import { MenuProvider, useMenu } from '../context/MenuContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Search, RefreshCw, AlertCircle, CheckCircle2, Menu as MenuIcon, Coffee } from 'lucide-react';
+import itemService from '../services/itemService';
 import MenuTable from '../components/menu/MenuTable';
-import MenuModal from '../components/modals/MenuModal';
+import MenuModal from '../components/menu/MenuModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import useModal from '../hooks/useModal';
 
-/**
- * MenuManagementPage - Trang quản lý Menu của Coffee Shop
- */
-const MenuManagementContent = () => {
-  const {
-    items,
-    categories,
-    loading,
-    error,
-    searchQuery,
-    fetchItems,
-    fetchCategories,
-    createItem,
-    updateItem,
-    deleteItem,
-    setSearch
-  } = useMenu();
-
-  const { showSuccessNotification, showErrorNotification } = useModal();
-
-  // Local state for modals and dialogs
+const MenuPage = () => {
+  // State quản lý danh sách và trạng thái tải
+  const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // State quản lý Modal và Dialog
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
-    item: null,
-    loading: false
+    item: null
   });
+  
+  // State hiện thông báo nhanh
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
 
-  // Debounced search effect
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchItems({ search: searchQuery });
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, fetchItems]);
-
-  // Initial data fetch
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  // Handlers
-  const handleOpenAddModal = () => {
-    setEditingItem(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (item) => {
-    setEditingItem(item);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingItem(null);
-  };
-
-  const handleFormSubmit = async (formData) => {
+  /**
+   * Tải danh sách món ăn từ API
+   */
+  const fetchItems = useCallback(async (searchQuery = '') => {
+    setIsLoading(true);
     try {
-      let result;
-      if (editingItem) {
-        result = await updateItem(editingItem._id, formData);
-      } else {
-        result = await createItem(formData);
-      }
-
-      if (result.success) {
-        showSuccessNotification(
-          editingItem ? 'Cập nhật món thành công!' : 'Thêm món mới thành công!'
-        );
-        handleCloseModal();
-      } else {
-        showErrorNotification(result.error || 'Đã xảy ra lỗi');
-      }
+      const data = await itemService.getAllItems({ search: searchQuery });
+      setItems(data);
+      setError(null);
     } catch (err) {
-      showErrorNotification('Có lỗi xảy ra khi lưu dữ liệu');
-      console.error(err);
+      setError(err.message || 'Không thể tải danh sách thực đơn.');
+      showNotification('Lỗi khi tải dữ liệu!', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Delay nhẹ khi search để tránh gọi API quá nhiều
+    const delayDebounce = setTimeout(() => {
+      fetchItems(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, fetchItems]);
+
+  /**
+   * Hiển thị thông báo (Toast)
+   */
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
+  };
+
+  /**
+   * Xử lý Lưu (Thêm mới hoặc Cập nhật)
+   */
+  const handleSaveItem = async (formData) => {
+    try {
+      if (editingItem) {
+        await itemService.updateItem(editingItem._id, formData);
+        showNotification(`Đã cập nhật món "${formData.name}" thành công`);
+      } else {
+        await itemService.createItem(formData);
+        showNotification(`Đã thêm món "${formData.name}" vào thực đơn`);
+      }
+      fetchItems(searchTerm);
+    } catch (err) {
+      throw new Error(err.message || 'Lỗi khi lưu thông tin món ăn');
     }
   };
 
-  const handleOpenDeleteConfirm = (item) => {
-    setConfirmDialog({
-      isOpen: true,
-      item: item,
-      loading: false
-    });
-  };
-
+  /**
+   * Xử lý Xóa món ăn
+   */
   const handleConfirmDelete = async () => {
-    if (!confirmDialog.item) return;
-
-    setConfirmDialog(prev => ({ ...prev, loading: true }));
+    const item = confirmDialog.item;
     try {
-      const result = await deleteItem(confirmDialog.item._id);
-      if (result.success) {
-        showSuccessNotification(`Đã xóa món "${confirmDialog.item.name}" thành công`);
-        setConfirmDialog({ isOpen: false, item: null, loading: false });
-      } else {
-        showErrorNotification(result.error || 'Lỗi khi xóa món');
-        setConfirmDialog(prev => ({ ...prev, loading: false }));
-      }
+      await itemService.deleteItem(item._id);
+      showNotification(`Đã xóa món "${item.name}" thành công`, 'success');
+      fetchItems(searchTerm);
+      setConfirmDialog({ isOpen: false, item: null });
     } catch (err) {
-      showErrorNotification('Có lỗi xảy ra khi xóa món');
-      setConfirmDialog(prev => ({ ...prev, loading: false }));
+      showNotification(err.message || 'Lỗi khi xóa món ăn', 'error');
     }
   };
 
   return (
-    <main className="flex-grow max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+    <div className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-28 animate-in fade-in duration-700">
       
-      {/* Header & Toolbar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 animate-pop">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-stone-900 mb-1.5">
-            Quản Lý Thực Đơn
-          </h1>
-          <p className="text-sm font-medium text-stone-500">
-            Quản lý danh sách món ăn, giá cả và danh mục của quán.
-          </p>
+      {/* Toast Notification */}
+      {notification.show && (
+        <div className={`fixed top-24 right-4 z-[100] p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right-full duration-500 border ${
+          notification.type === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-100' : 'bg-rose-50 text-rose-800 border-rose-100'
+        }`}>
+          {notification.type === 'success' ? <CheckCircle2 className="text-emerald-500" /> : <AlertCircle className="text-rose-500" />}
+          <span className="font-semibold text-sm">{notification.message}</span>
+        </div>
+      )}
+
+      {/* Toolbar & Header Section */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
+        <div className="flex items-center gap-4">
+          <div className="p-4 bg-amber-100/50 rounded-2xl text-amber-900 border border-amber-200/40 shadow-inner">
+            <Coffee size={28} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-stone-900 tracking-tight uppercase flex items-center gap-2">
+              QUẢN LÝ THỰC ĐƠN
+              <span className="text-xs bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full font-bold ml-2">BETA</span>
+            </h1>
+            <p className="text-stone-500 font-medium">Tùy chỉnh các món ăn và đồ uống của quán bạn.</p>
+          </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search Input */}
-          <div className="relative group w-full sm:w-80">
-            <Icon 
-              icon="lucide:search" 
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-amber-600 transition-colors" 
-            />
+        <div className="bg-white p-2 rounded-2xl border border-stone-200 shadow-xl shadow-stone-200/30 flex flex-col sm:flex-row items-stretch gap-3 lg:w-max min-w-[300px]">
+          {/* Ô tìm kiếm */}
+          <div className="relative group flex-grow lg:min-w-[350px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 font-bold group-focus-within:text-amber-600 group-hover:scale-110 transition-all" size={18} />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên món..."
-              value={searchQuery}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-300 transition-all text-sm shadow-sm"
+              placeholder="Tìm món ăn (vd: Cà phê, Trà sữa...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-stone-100/30 border border-stone-100 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all placeholder:text-stone-400 text-stone-800 font-medium"
             />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-100 transition-all"
-              >
-                <Icon icon="lucide:x" className="text-sm" />
-              </button>
-            )}
           </div>
 
-          <button
-            onClick={handleOpenAddModal}
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-stone-900 text-white text-sm font-bold rounded-xl hover:bg-stone-800 transition-all shadow-lg active:scale-[0.98] group"
+          {/* Nút thêm mới */}
+          <button 
+            onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
+            className="px-6 py-3 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-all flex items-center justify-center gap-2 font-bold shadow-lg shadow-stone-300 active:scale-95 group"
           >
-            <Icon icon="lucide:plus" className="text-lg group-hover:rotate-90 transition-transform duration-300" />
-            Thêm Món Mới
+            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+            THÊM MÓN MỚI
           </button>
         </div>
       </div>
 
-      {/* Main Table Content */}
-      <div className="animate-pop" style={{ animationDelay: '0.1s' }}>
-        {error ? (
-          <div className="w-full bg-rose-50 border border-rose-100 rounded-xl p-6 text-center">
-            <Icon icon="lucide:alert-circle" className="text-3xl text-rose-500 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-rose-900 mb-1">Đã có lỗi xảy ra</h3>
-            <p className="text-rose-600 mb-4">{error}</p>
-            <button
-              onClick={() => fetchItems()}
-              className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors text-sm font-bold"
-            >
-              Thử lại
-            </button>
+      {/* Table Section */}
+      {error && (
+        <div className="p-5 bg-rose-50 border-2 border-rose-100 rounded-3xl text-rose-800 flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-rose-100 rounded-2xl text-rose-600">
+              <AlertCircle />
+            </div>
+            <div>
+              <p className="font-bold">Đã xảy ra lỗi!</p>
+              <p className="text-sm opacity-80">{error}</p>
+            </div>
           </div>
-        ) : (
-          <MenuTable
-            items={items}
-            loading={loading}
-            onEdit={handleOpenEditModal}
-            onDelete={handleOpenDeleteConfirm}
-          />
-        )}
-      </div>
+          <button 
+            onClick={() => fetchItems(searchTerm)}
+            className="px-5 py-2.5 bg-rose-200/50 hover:bg-rose-200 text-rose-700 rounded-xl text-sm font-bold transition-all flex items-center gap-2"
+          >
+            <RefreshCw size={16} /> THỬ LẠI
+          </button>
+        </div>
+      )}
 
-      {/* Modal & Dialogs */}
+      <MenuTable
+        items={items}
+        isLoading={isLoading}
+        onEdit={(item) => { setEditingItem(item); setIsModalOpen(true); }}
+        onDelete={(item) => setConfirmDialog({ isOpen: true, item })}
+      />
+
+      {/* Modals & Dialogs */}
       <MenuModal
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        initialData={editingItem}
-        onSubmit={handleFormSubmit}
-        categories={categories}
-        loading={loading}
+        editingItem={editingItem}
+        onClose={() => { setIsModalOpen(false); setEditingItem(null); }}
+        onSave={handleSaveItem}
       />
 
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         title="Xác nhận xóa món"
-        message={`Bạn có chắc chắn muốn xóa món "${confirmDialog.item?.name}"? Hành động này không thể hoàn tác.`}
+        message={`Bạn có chắc muốn xóa món "${confirmDialog.item?.name}" không? Hành động này không thể hoàn tác.`}
         confirmText="Xóa món"
-        cancelText="Hủy"
+        cancelText="Hủy bỏ"
         onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmDialog({ isOpen: false, item: null, loading: false })}
-        isLoading={confirmDialog.loading}
+        onCancel={() => setConfirmDialog({ isOpen: false, item: null })}
         variant="danger"
       />
-    </main>
+    </div>
   );
 };
-
-// Wrap the content with MenuProvider
-const MenuPage = () => (
-  <MenuProvider>
-    <MenuManagementContent />
-  </MenuProvider>
-);
 
 export default MenuPage;
