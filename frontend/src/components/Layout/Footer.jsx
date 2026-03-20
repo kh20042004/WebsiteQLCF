@@ -3,14 +3,14 @@
  * 
  * Nhiệm vụ:
  * - Hiển thị thông tin copyright
- * - Links útilh
+ * - Links utils
  * - Thông tin liên hệ
  * 
  * Props: (none)
  */
 
 import React from 'react';
-import '../styles/Footer.css';
+import '../../styles/Footer.css';
 
 function Footer() {
   const currentYear = new Date().getFullYear();
