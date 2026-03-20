@@ -1,43 +1,22 @@
-/**
- * File: Cấu hình Axios client
- * 
- * Nhiệm vụ:
- * - Khởi tạo instance axios
- * - Cấu hình base URL từ .env
- * - Setup interceptor cho token JWT
- * - Xử lý lỗi chung
- */
-
 import axios from 'axios';
 
-/**
- * Khởi tạo Axios instance
- * - Base URL trỏ đến backend API
- * - Cấu hình timeout 10 giây
- */
-const API_CLIENT = axios.create({
-  // Sử dụng biến môi trường, nếu không có thì dùng localhost
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000',
+// Create axios instance with base configuration
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-  },
+    'Content-Type': 'application/json'
+  }
 });
 
-/**
- * Interceptor: Request
- * - Thêm JWT token vào header Authorization trước mỗi request
- */
-API_CLIENT.interceptors.request.use(
+// Request interceptor
+api.interceptors.request.use(
   (config) => {
-    // Lấy token từ localStorage
-    const token = localStorage.getItem('token');
-
-    // Nếu có token, thêm vào header
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
+    // Add auth token to requests in future (when auth is implemented)
+    // const token = localStorage.getItem('authToken');
+    // if (token) {
+    //   config.headers.Authorization = `Bearer ${token}`;
+    // }
     return config;
   },
   (error) => {
@@ -45,68 +24,25 @@ API_CLIENT.interceptors.request.use(
   }
 );
 
-/**
- * Interceptor: Response
- * - Xử lý lỗi chung
- * - Nếu token hết hạn (401), redirect về login
- */
-API_CLIENT.interceptors.response.use(
-  (response) => response,
+// Response interceptor - Extract data and handle errors centrally
+api.interceptors.response.use(
+  (response) => {
+    // Backend returns { success: true, message: "...", data: {...} }
+    // Extract just the data for easier use in components
+    return response.data.data || response.data;
+  },
   (error) => {
-    // Nếu lỗi 401 (Unauthorized) - token hết hạn hoặc invalid
-    if (error.response?.status === 401) {
-      // Xóa token và user
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      
-      // Redirect về login
-      window.location.href = '/login';
-    }
+    // Handle errors centrally
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      'Đã xảy ra lỗi không xác định';
 
-    return Promise.reject(error);
+    // Log error for debugging
+    console.error('API Error:', error.response || error);
+
+    return Promise.reject(new Error(message));
   }
 );
 
-/**
- * Hàm API GET
- * @param {string} endpoint - Đường dẫn API (vd: /auth/me)
- * @param {object} config - Cấu hình thêm (headers, params, ...)
- * @returns {Promise}
- */
-export const apiGet = (endpoint, config = {}) => {
-  return API_CLIENT.get(endpoint, config);
-};
-
-/**
- * Hàm API POST
- * @param {string} endpoint - Đường dẫn API
- * @param {object} data - Dữ liệu gửi lên
- * @param {object} config - Cấu hình thêm
- * @returns {Promise}
- */
-export const apiPost = (endpoint, data = {}, config = {}) => {
-  return API_CLIENT.post(endpoint, data, config);
-};
-
-/**
- * Hàm API PUT
- * @param {string} endpoint - Đường dẫn API
- * @param {object} data - Dữ liệu cập nhật
- * @param {object} config - Cấu hình thêm
- * @returns {Promise}
- */
-export const apiPut = (endpoint, data = {}, config = {}) => {
-  return API_CLIENT.put(endpoint, data, config);
-};
-
-/**
- * Hàm API DELETE
- * @param {string} endpoint - Đường dẫn API
- * @param {object} config - Cấu hình thêm
- * @returns {Promise}
- */
-export const apiDelete = (endpoint, config = {}) => {
-  return API_CLIENT.delete(endpoint, config);
-};
-
-export default API_CLIENT;
+export default api;

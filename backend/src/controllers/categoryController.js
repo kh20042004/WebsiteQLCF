@@ -1,14 +1,24 @@
 const Category = require('../models/Category');
+const Item = require('../models/Item');
 
 /**
  * Lấy danh sách danh mục
  */
 const getAllCategories = async (req, res, next) => {
   try {
-    const categories = await Category.find();
+    const { search } = req.query;
+    let queryObj = {};
+
+    // Tìm kiếm theo tên (regex không phân biệt hoa thường)
+    if (search) {
+      queryObj.name = { $regex: search, $options: 'i' };
+    }
+
+    const categories = await Category.find(queryObj);
 
     res.status(200).json({
       status: true,
+      results: categories.length,
       data: categories,
     });
   } catch (error) {
@@ -88,6 +98,17 @@ const updateCategory = async (req, res, next) => {
  */
 const deleteCategory = async (req, res, next) => {
   try {
+    // 1. Kiểm tra xem có sản phẩm nào đang thuộc danh mục này không
+    const itemCount = await Item.countDocuments({ category: req.params.id });
+    
+    if (itemCount > 0) {
+      return res.status(400).json({
+        status: false,
+        message: `Không thể xóa danh mục này vì vẫn còn ${itemCount} sản phẩm bên trong. Hãy xóa hoặc chuyển các sản phẩm đó sang danh mục khác trước.`
+      });
+    }
+
+    // 2. Thực hiện xóa danh mục
     const category = await Category.findByIdAndDelete(req.params.id);
 
     if (!category) {
