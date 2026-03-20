@@ -43,8 +43,12 @@ app.get('/', (req, res) => {
 });
 
 // ---- SỬ DỤNG ROUTES ----
-// Các routes sẽ được thêm vào đây (auth, categories, items, tables, orders, etc.)
-// Ví dụ: app.use('/auth', authRoutes);
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+
+// Sử dụng routes
+app.use('/auth', authRoutes);
+// Các routes khác sẽ được thêm vào đây (categories, items, tables, orders, etc.)
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
 app.use((req, res) => {
@@ -56,8 +60,8 @@ app.use((req, res) => {
 
 // ---- MIDDLEWARE XỬ LÝ LỖI (PHẢI CUỐI CÙNG) ----
 // Import handleError middleware từ những người làm Auth
-// const handleError = require('./middlewares/handleError');
-// app.use(handleError);
+const handleError = require('./middlewares/handleError');
+app.use(handleError);
 
 // ---- KHỞI ĐỘNG SERVER ----
 const PORT = process.env.PORT || 3000;
