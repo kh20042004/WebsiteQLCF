@@ -77,11 +77,20 @@ const createItem = async (req, res, next) => {
 
     // --- Xử lý logic upload ảnh ---
     const itemData = req.body;
+
+    // Debug dữ liệu cho create (Xóa sau khi fix xong)
+    console.log('Create Data received:', itemData);
+    console.log('File for create:', req.file);
     
     // Nếu có file upload từ Multer (req.file)
     if (req.file) {
       // Lưu địa chỉ URL của ảnh thật trên server
       itemData.image = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    } else {
+      // Nếu không có file mới, đảm bảo không lưu Object trống {} vào trường image của MongoDB
+      if (typeof itemData.image === 'object' || itemData.image === '{}' || itemData.image === '[object Object]') {
+        delete itemData.image;
+      }
     }
     
     // Tạo sản phẩm mới
