@@ -59,7 +59,7 @@ app.use((req, res) => {
 });
 
 // ---- MIDDLEWARE XỬ LÝ LỖI (PHẢI CUỐI CÙNG) ----
-// Import handleError middleware từ những người làm Auth
+// Import handleError middleware
 const handleError = require('./middlewares/handleError');
 app.use(handleError);
 

@@ -1,39 +1,67 @@
 /**
- * File: Cấu hình Axios client
+ * ========================================
+ * AXIOS API INSTANCE
+ * ========================================
  * 
- * Nhiệm vụ:
- * - Khởi tạo instance axios
- * - Cấu hình base URL từ .env
- * - Setup interceptor cho token JWT
- * - Xử lý lỗi chung
+ * Cấu hình Axios instance:
+ * - Base URL: http://localhost:3000
+ * - Request interceptor: Tự động thêm JWT token vào Authorization header
+ * - Response interceptor: Handle error responses
+ * - Timeout: 5 giây
+ * 
+ * Sử dụng:
+ * import api from './api';
+ * api.get('/auth/profile');  // Tự động thêm token
+ * 
+ * Cơ chế Interceptor:
+ * 1. Trước khi gửi request → Kiểm tra token ở localStorage
+ * 2. Nếu có token → Thêm vào Authorization header
+ * 3. Sau khi nhận response → Kiểm tra lỗi 401 (token hết hạn)
+ * 4. Nếu 401 → Refresh token và gửi lại request
  */
 
 import axios from 'axios';
 
+// ============================================
+// HẰNG SỐ
+// ============================================
+// Base URL của backend API
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+
+// Timeout cho request (5 giây)
+const REQUEST_TIMEOUT = 5000;
+
+// ============================================
+// TẠO AXIOS INSTANCE
+// ============================================
 /**
- * Khởi tạo Axios instance
- * - Base URL trỏ đến backend API
- * - Cấu hình timeout 10 giây
+ * Tạo Axios instance với cấu hình mặc định
  */
-const API_CLIENT = axios.create({
-  // Sử dụng biến môi trường, nếu không có thì dùng localhost
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000',
-  timeout: 10000,
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: REQUEST_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// ============================================
+// REQUEST INTERCEPTOR
+// ============================================
 /**
- * Interceptor: Request
- * - Thêm JWT token vào header Authorization trước mỗi request
+ * Middleware chạy TRƯỚC khi gửi request
+ * 
+ * Công việc:
+ * 1. Lấy JWT token từ localStorage
+ * 2. Thêm token vào Authorization header (nếu có)
+ * 3. Tiếp tục gửi request
  */
-API_CLIENT.interceptors.request.use(
+api.interceptors.request.use(
   (config) => {
     // Lấy token từ localStorage
     const token = localStorage.getItem('token');
 
-    // Nếu có token, thêm vào header
+    // Nếu có token → Thêm vào header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -41,72 +69,70 @@ API_CLIENT.interceptors.request.use(
     return config;
   },
   (error) => {
+    // Nếu có lỗi khi setup request
     return Promise.reject(error);
   }
 );
 
+// ============================================
+// RESPONSE INTERCEPTOR
+// ============================================
 /**
- * Interceptor: Response
- * - Xử lý lỗi chung
- * - Nếu token hết hạn (401), redirect về login
+ * Middleware chạy SAU khi nhận response
+ * 
+ * Công việc:
+ * 1. Kiểm tra status code của response
+ * 2. Nếu 401 (Unauthorized) → Token hết hạn, cần refresh
+ * 3. Nếu lỗi khác → Trả lỗi
+ * 4. Nếu thành công → Trả response
+ * 
+ * Lưu ý: Hiện tại chưa implement auto-refresh token
+ * Có thể implement sau nếu cần
  */
-API_CLIENT.interceptors.response.use(
-  (response) => response,
+api.interceptors.response.use(
+  (response) => {
+    // Nếu response thành công (2xx)
+    return response;
+  },
   (error) => {
-    // Nếu lỗi 401 (Unauthorized) - token hết hạn hoặc invalid
+    // Nếu có error
+
+    // Kiểm tra nếu là lỗi 401 (token hết hạn hoặc không hợp lệ)
     if (error.response?.status === 401) {
-      // Xóa token và user
+      // Xóa token hết hạn
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      
-      // Redirect về login
+
+      // Redirect về login page
       window.location.href = '/login';
+
+      // Ẩn message error "Token hết hạn"
+      return Promise.reject(
+        new Error('Token hết hạn, vui lòng đăng nhập lại')
+      );
     }
 
-    return Promise.reject(error);
+    // Nếu là lỗi khác
+    if (error.response?.status === 500) {
+      return Promise.reject(
+        new Error('Lỗi server, vui lòng liên hệ với admin')
+      );
+    }
+
+    // Nếu là lỗi mạng (không kết nối được)
+    if (!error.response) {
+      return Promise.reject(
+        new Error('Lỗi kết nối, vui lòng kiểm tra internet')
+      );
+    }
+
+    // Nếu backend return error message
+    const errorMessage = error.response?.data?.message || error.message;
+    return Promise.reject(new Error(errorMessage));
   }
 );
 
-/**
- * Hàm API GET
- * @param {string} endpoint - Đường dẫn API (vd: /auth/me)
- * @param {object} config - Cấu hình thêm (headers, params, ...)
- * @returns {Promise}
- */
-export const apiGet = (endpoint, config = {}) => {
-  return API_CLIENT.get(endpoint, config);
-};
-
-/**
- * Hàm API POST
- * @param {string} endpoint - Đường dẫn API
- * @param {object} data - Dữ liệu gửi lên
- * @param {object} config - Cấu hình thêm
- * @returns {Promise}
- */
-export const apiPost = (endpoint, data = {}, config = {}) => {
-  return API_CLIENT.post(endpoint, data, config);
-};
-
-/**
- * Hàm API PUT
- * @param {string} endpoint - Đường dẫn API
- * @param {object} data - Dữ liệu cập nhật
- * @param {object} config - Cấu hình thêm
- * @returns {Promise}
- */
-export const apiPut = (endpoint, data = {}, config = {}) => {
-  return API_CLIENT.put(endpoint, data, config);
-};
-
-/**
- * Hàm API DELETE
- * @param {string} endpoint - Đường dẫn API
- * @param {object} config - Cấu hình thêm
- * @returns {Promise}
- */
-export const apiDelete = (endpoint, config = {}) => {
-  return API_CLIENT.delete(endpoint, config);
-};
-
-export default API_CLIENT;
+// ============================================
+// EXPORT
+// ============================================
+export default api;

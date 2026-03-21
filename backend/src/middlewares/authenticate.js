@@ -1,72 +1,42 @@
 /**
- * ========================================
- * AUTHENTICATE MIDDLEWARE
- * ========================================
- * 
- * Middleware để xác thực JWT token từ header request
- * Được sử dụng để bảo vệ các protected routes
- * 
- * Cơ chế hoạt động:
- * 1. Lấy token từ header Authorization (Bearer xxx)
- * 2. Verify token bằng JWT secret
- * 3. Nếu hợp lệ: Lưu user ID vào req.user để sử dụng ở controller
- * 4. Nếu không hợp lệ: Trả lỗi 401 Unauthorized
- * 
- * Cách sử dụng trong route:
- * router.get('/profile', authenticate, authController.getProfile);
+ * Middleware: Xác thực JWT Token
+ * - Kiểm tra token trong header Authorization
+ * - Nếu token hợp lệ, lưu userId vào req.userId
+ * - Nếu không có token hoặc token không hợp lệ, trả về lỗi 401
  */
 
-const { UnauthorizedException } = require('../exceptions');
-const authService = require('../services/authService');
+const { verifyToken } = require('../utils/jwt');
 
-/**
- * Middleware xác thực token
- * 
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next function
- * 
- * Luồng xử lý:
- * - req.headers.authorization = "Bearer token_here"
- * - Khi verify token thành công, req.user = { id: userId }
- */
 const authenticate = (req, res, next) => {
   try {
-    // ---- BƯỚC 1: LẤY TOKEN TỪ HEADER ----
-    // Authorization header format: "Bearer xxx"
+    // Lấy token từ header Authorization
+    // Format: Authorization: Bearer <token>
     const authHeader = req.headers.authorization;
 
-    // Kiểm tra xem header có tồn tại không
-    if (!authHeader) {
-      return next(new UnauthorizedException('Vui lòng cung cấp token'));
+    // Kiểm tra nếu không có token
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        status: false,
+        message: 'Vui lòng cung cấp token',
+      });
     }
 
-    // Kiểm tra xem header có "Bearer " prefix không
-    if (!authHeader.startsWith('Bearer ')) {
-      return next(new UnauthorizedException('Format token không hợp lệ'));
-    }
+    // Tách token từ header (bỏ "Bearer " ở đầu)
+    const token = authHeader.split(' ')[1];
 
-    // Trích xuất token (bỏ "Bearer " prefix)
-    const token = authHeader.slice(7); // Bỏ 7 ký tự "Bearer "
+    // Xác thực token
+    const decoded = verifyToken(token);
 
-    // ---- BƯỚC 2: VERIFY TOKEN ----
-    const decoded = authService.verifyToken(token);
+    // Lưu userId vào req để sử dụng ở các route sau này
+    req.userId = decoded.id;
 
-    // Nếu verify fail (token không hợp lệ hoặc hết hạn)
-    if (!decoded) {
-      return next(new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn'));
-    }
-
-    // ---- BƯỚC 3: LƯU USER ID VÀO req.user ----
-    // Để sử dụng ở controller: const userId = req.user.id;
-    req.user = {
-      id: decoded.id,
-    };
-
-    // ---- BƯỚC 4: CHUYỂN ĐẾN CONTROLLER TIẾP THEO ----
+    // Chuyển tiếp đến middleware/route tiếp theo
     next();
   } catch (error) {
-    next(new UnauthorizedException('Lỗi xác thực token'));
+    return res.status(401).json({
+      status: false,
+      message: error.message || 'Token không hợp lệ',
+    });
   }
 };
 

@@ -1,117 +1,87 @@
 /**
- * ========================================
- * USER MODEL - Schema và Method
- * ========================================
+ * Model User - Quản lý thông tin người dùng (Tài khoản nhân viên)
  * 
- * Định nghĩa cấu trúc dữ liệu người dùng:
- * - Lưu trữ thông tin: tên, email, mật khẩu
- * - Tự động mã hóa mật khẩu trước khi lưu
- * - Cung cấp method so sánh mật khẩu
- * 
- * Sử dụng: Mongoose ORM để tương tác với MongoDB
+ * Fields:
+ * - name: Tên nhân viên
+ * - email: Email (dùng để login)
+ * - password: Mật khẩu (hash bằng bcryptjs)
+ * - role: Vai trò (admin, staff)
+ * - createdAt: Thời gian tạo
  */
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-// ---- ĐỊNH NGHĨA SCHEMA ----
+// Tạo schema cho User
 const userSchema = new mongoose.Schema(
   {
-    // Tên người dùng
+    // Tên nhân viên
     name: {
       type: String,
       required: [true, 'Vui lòng nhập tên'],
       trim: true,
-      minlength: [3, 'Tên phải từ 3 ký tự trở lên'],
+      maxlength: [100, 'Tên không quá 100 ký tự'],
     },
 
-    // Email - duy nhất, không trùng
+    // Email (dùng để đăng nhập)
     email: {
       type: String,
       required: [true, 'Vui lòng nhập email'],
       unique: true,
       lowercase: true,
-      match: [
-        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-        'Vui lòng nhập email hợp lệ',
-      ],
+      match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Email không hợp lệ'],
     },
 
-    // Mật khẩu - được mã hóa, không trả về mặc định
+    // Mật khẩu (sẽ được hash trước khi lưu)
     password: {
       type: String,
       required: [true, 'Vui lòng nhập mật khẩu'],
-      minlength: [6, 'Mật khẩu phải từ 6 ký tự trở lên'],
-      select: false, // Mặc định không trả về password khi query
+      minlength: [6, 'Mật khẩu phải ít nhất 6 ký tự'],
+      select: false, // Không lấy password khi query mặc định
     },
 
-    // Vai trò người dùng (admin, staff, customer)
+    // Vai trò (admin, staff)
     role: {
       type: String,
-      enum: ['admin', 'staff', 'customer'],
-      default: 'customer',
-    },
-
-    // Trạng thái người dùng (active, inactive)
-    status: {
-      type: String,
-      enum: ['active', 'inactive'],
-      default: 'active',
-    },
-
-    // Thời gian tạo và cập nhật
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
+      enum: ['admin', 'staff'],
+      default: 'staff',
     },
   },
   {
-    timestamps: true, // Tự động cập nhật updatedAt
+    // Tự động thêm createdAt, updatedAt
+    timestamps: true,
   }
 );
 
-// ---- MIDDLEWARE: TỰ ĐỘNG MÃ HÓA MẬT KHẨU TRƯỚC KHI LƯU ----
 /**
- * Trước khi save, kiểm tra nếu password bị thay đổi
- * Nếu có, mã hóa nó bằng bcryptjs
+ * Middleware: Hash mật khẩu trước khi lưu
+ * - Chỉ hash nếu password được thay đổi
+ * - Sử dụng bcryptjs để hash (salt: 10)
  */
 userSchema.pre('save', async function (next) {
-  // Nếu password không bị thay đổi, bỏ qua middleware này
+  // Kiểm tra nếu password không được thay đổi, bỏ qua
   if (!this.isModified('password')) {
-    return next();
+    next();
   }
 
   try {
-    // Tạo salt (độ phức tạp mã hóa)
+    // Tạo salt và hash password
     const salt = await bcrypt.genSalt(10);
-
-    // Mã hóa password
     this.password = await bcrypt.hash(this.password, salt);
-
     next();
   } catch (error) {
     next(error);
   }
 });
 
-// ---- METHOD: SO SÁNH MẬT KHẨU ----
 /**
- * So sánh mật khẩu nhập vào với mật khẩu đã mã hóa trong database
- * 
- * @param {string} enteredPassword - Mật khẩu từ người dùng nhập
- * @returns {Promise<boolean>} - true nếu khớp, false nếu không
- * 
- * Cách sử dụng:
- * const user = await User.findOne({ email }).select('+password');
- * const isMatch = await user.comparePassword('user_password');
+ * Method: So sánh password nhập vào với password trong DB
+ * @param {string} enteredPassword - Mật khẩu nhập vào
+ * @returns {boolean} - true nếu khớp, false nếu không
  */
-userSchema.methods.comparePassword = async function (enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// ---- XUẤT MODEL ----
+// Tạo và export model User
 module.exports = mongoose.model('User', userSchema);

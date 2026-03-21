@@ -1,0 +1,131 @@
+/**
+ * ========================================
+ * CSS STYLES FOR LOGIN PAGE
+ * ========================================
+ * 
+ * Các class:
+ * - .login-container: Container chính
+ * - .login-header: Phần header (logo)
+ * - .login-form: Form đăng nhập
+ * - .form-group: Group input (label + input)
+ * - .login-button: Nút submit
+ * - .login-footer: Phần footer (link register)
+ */
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 40px;
+  color: white;
+}
+
+.login-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.login-header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.login-form {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 5px rgba(102, 126, 234, 0.1);
+}
+
+.form-group input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.login-button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.login-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 20px;
+  color: white;
+}
+
+.login-footer a {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.login-footer a:hover {
+  border-bottom-color: white;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .login-form {
+    padding: 30px 20px;
+  }
+
+  .login-header h1 {
+    font-size: 2rem;
+  }
+}
