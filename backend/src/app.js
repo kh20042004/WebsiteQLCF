@@ -33,6 +33,11 @@ app.use(express.json());
 // Middleware: Parse URL-encoded data
 app.use(express.urlencoded({ extended: true }));
 
+// ---- SERVICE STATIC FILES (Ảnh sản phẩm) ----
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+
 // ---- KẾT NỐI DATABASE ----
 connectDB();
 
@@ -49,15 +54,17 @@ app.get('/', (req, res) => {
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const itemRoutes = require('./routes/itemRoutes');
 
-// Auth & Order routes
-app.use('/auth', authRoutes);
-app.use('/orders', orderRoutes);
-
-// Table Routes
+// ---- SETUP API ROUTES (PREFIX /api) ----
+// Tất cả API routes đều có prefix /api
+app.use('/api/auth', authRoutes);
+app.use('/api/orders', orderRoutes);
 app.use('/api/tables', tableRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/items', itemRoutes);
 
-// Các routes khác sẽ được thêm vào đây (categories, items, etc.)
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
 app.use((req, res) => {
@@ -67,10 +74,9 @@ app.use((req, res) => {
   });
 });
 
-// ---- MIDDLEWARE XỬ LÝ LỖI (PHẢI CUỐI CÙNG) ----
-// Import handleError middleware từ những người làm Auth
-const handleError = require('./middlewares/handleError');
-app.use(handleError);
+
+// const handleError = require('./middlewares/handleError');
+// app.use(handleError);
 
 // ---- KHỞI ĐỘNG SERVER ----
 const PORT = process.env.PORT || 3000;

@@ -14,7 +14,7 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
-import '../styles/MainLayout.css';
+import '../../styles/MainLayout.css';
 
 function MainLayout() {
   // State để kiểm soát sidebar (thumb-nail/mở)
