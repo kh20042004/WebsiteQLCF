@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, RefreshCw, AlertCircle, CheckCircle2, Menu as MenuIcon, Coffee } from 'lucide-react';
+import { Plus, Search, RefreshCw, AlertCircle, CheckCircle2, Menu as MenuIcon, Coffee, Tag } from 'lucide-react';
 import itemService from '../services/itemService';
 import MenuTable from '../components/menu/MenuTable';
 import MenuModal from '../components/menu/MenuModal';
+import CategoryModal from '../components/menu/CategoryModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 
 const MenuPage = () => {
@@ -14,6 +15,7 @@ const MenuPage = () => {
   
   // State quản lý Modal và Dialog
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -131,6 +133,15 @@ const MenuPage = () => {
             />
           </div>
 
+          {/* Nút Quản lý danh mục */}
+          <button 
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="px-6 py-3 bg-white text-stone-900 border-2 border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-300 transition-all flex items-center justify-center gap-2 font-bold active:scale-95"
+          >
+            <Tag size={18} />
+            QUẢN LÝ DANH MỤC
+          </button>
+
           {/* Nút thêm mới */}
           <button 
             onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
@@ -176,6 +187,12 @@ const MenuPage = () => {
         editingItem={editingItem}
         onClose={() => { setIsModalOpen(false); setEditingItem(null); }}
         onSave={handleSaveItem}
+      />
+
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onCategoryUpdate={() => fetchItems(searchTerm)}
       />
 
       <ConfirmDialog
