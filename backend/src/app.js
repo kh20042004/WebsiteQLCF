@@ -56,12 +56,12 @@ const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 
-// Sử dụng routes
-app.use('/auth', authRoutes);
-app.use('/tables', tableRoutes);
-app.use('/categories', categoryRoutes);
-app.use('/products', itemRoutes);
-// Các routes khác sẽ được thêm vào đây (categories, items, tables, orders, etc.)
+// ---- SETUP API ROUTES (PREFIX /api) ----
+// Tất cả API routes đều có prefix /api
+app.use('/api/auth', authRoutes);
+app.use('/api/tables', tableRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/items', itemRoutes);
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
 app.use((req, res) => {
