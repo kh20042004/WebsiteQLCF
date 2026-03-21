@@ -14,6 +14,9 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/database');
 
+// ---- IMPORT ROUTES ----
+const tableRoutes = require('./routes/tableRoutes');
+
 // ---- LOAD BIẾN MÔI TRƯỜNG TỪ .env ----
 dotenv.config();
 
@@ -47,10 +50,14 @@ app.get('/', (req, res) => {
 const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 
-// Sử dụng routes
+// Auth & Order routes
 app.use('/auth', authRoutes);
 app.use('/orders', orderRoutes);
-// Các routes khác sẽ được thêm vào đây (categories, items, tables, etc.)
+
+// Table Routes
+app.use('/api/tables', tableRoutes);
+
+// Các routes khác sẽ được thêm vào đây (categories, items, etc.)
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
 app.use((req, res) => {

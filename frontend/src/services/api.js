@@ -3,7 +3,7 @@
  * 
  * Nhiệm vụ:
  * - Khởi tạo instance axios
- * - Cấu hình base URL từ .env
+ * - Cấu hình base URL từ .env (Vite: import.meta.env)
  * - Setup interceptor cho token JWT
  * - Xử lý lỗi chung
  */
@@ -15,9 +15,8 @@ import axios from 'axios';
  * - Base URL trỏ đến backend API
  * - Cấu hình timeout 10 giây
  */
-const API_CLIENT = axios.create({
-  // Sử dụng biến môi trường, nếu không có thì dùng localhost
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000',
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -28,7 +27,7 @@ const API_CLIENT = axios.create({
  * Interceptor: Request
  * - Thêm JWT token vào header Authorization trước mỗi request
  */
-API_CLIENT.interceptors.request.use(
+api.interceptors.request.use(
   (config) => {
     // Lấy token từ localStorage
     const token = localStorage.getItem('token');
@@ -47,34 +46,47 @@ API_CLIENT.interceptors.request.use(
 
 /**
  * Interceptor: Response
- * - Xử lý lỗi chung
+ * - Extract data từ response backend ({ success, message, data })
  * - Nếu token hết hạn (401), redirect về login
  */
-API_CLIENT.interceptors.response.use(
-  (response) => response,
+api.interceptors.response.use(
+  (response) => {
+    // Backend trả về { success: true, message: "...", data: {...} }
+    // Extract data để dùng dễ hơn trong components
+    return response.data.data !== undefined ? response.data.data : response.data;
+  },
   (error) => {
     // Nếu lỗi 401 (Unauthorized) - token hết hạn hoặc invalid
     if (error.response?.status === 401) {
       // Xóa token và user
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      
+
       // Redirect về login
       window.location.href = '/login';
     }
 
-    return Promise.reject(error);
+    // Lấy message lỗi từ response
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      'Đã xảy ra lỗi không xác định';
+
+    // Log error để debug
+    console.error('API Error:', error.response || error);
+
+    return Promise.reject(new Error(message));
   }
 );
 
 /**
  * Hàm API GET
- * @param {string} endpoint - Đường dẫn API (vd: /auth/me)
+ * @param {string} endpoint - Đường dẫn API (vd: /tables)
  * @param {object} config - Cấu hình thêm (headers, params, ...)
  * @returns {Promise}
  */
 export const apiGet = (endpoint, config = {}) => {
-  return API_CLIENT.get(endpoint, config);
+  return api.get(endpoint, config);
 };
 
 /**
@@ -85,7 +97,7 @@ export const apiGet = (endpoint, config = {}) => {
  * @returns {Promise}
  */
 export const apiPost = (endpoint, data = {}, config = {}) => {
-  return API_CLIENT.post(endpoint, data, config);
+  return api.post(endpoint, data, config);
 };
 
 /**
@@ -96,7 +108,7 @@ export const apiPost = (endpoint, data = {}, config = {}) => {
  * @returns {Promise}
  */
 export const apiPut = (endpoint, data = {}, config = {}) => {
-  return API_CLIENT.put(endpoint, data, config);
+  return api.put(endpoint, data, config);
 };
 
 /**
@@ -106,7 +118,7 @@ export const apiPut = (endpoint, data = {}, config = {}) => {
  * @returns {Promise}
  */
 export const apiDelete = (endpoint, config = {}) => {
-  return API_CLIENT.delete(endpoint, config);
+  return api.delete(endpoint, config);
 };
 
-export default API_CLIENT;
+export default api;
