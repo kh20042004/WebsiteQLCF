@@ -13,6 +13,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/database');
+const orderRoutes = require('./routes/orderRoutes');
 
 // ---- IMPORT ROUTES ----
 const tableRoutes = require('./routes/tableRoutes');
@@ -37,6 +38,8 @@ app.use(express.urlencoded({ extended: true }));
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+app.use('/api/orders', orderRoutes);
+
 
 // ---- KẾT NỐI DATABASE ----
 connectDB();
@@ -55,6 +58,7 @@ app.get('/', (req, res) => {
 const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const itemRoutes = require('./routes/itemRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 // ---- SETUP API ROUTES (PREFIX /api) ----
 // Tất cả API routes đều có prefix /api
@@ -62,6 +66,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/items', itemRoutes);
+app.use('/api/reports', reportRoutes);
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
 app.use((req, res) => {

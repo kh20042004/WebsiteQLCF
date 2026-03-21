@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react'; // Thêm useState
 import { Icon } from '@iconify/react';
 import useModal from '../../hooks/useModal';
+import { checkoutOrder } from '../../services/orderService'; // 1. IMPORT HÀM THANH TOÁN CỦA ANH VÀO ĐÂY
 
 /**
  * BillPanel Component - Sliding side panel để hiển thị hóa đơn
@@ -8,6 +9,7 @@ import useModal from '../../hooks/useModal';
  */
 const BillPanel = () => {
   const { isBillPanelOpen, currentTableForBill, closeBillPanel } = useModal();
+  const [isProcessing, setIsProcessing] = useState(false); // Trạng thái đang xử lý thanh toán
 
   // Mock order data for demonstration
   const mockOrderItems = [
@@ -47,6 +49,38 @@ const BillPanel = () => {
     return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
   };
 
+  // ==========================================
+  // 2. HÀM XỬ LÝ KHI BẤM NÚT "THANH TOÁN NGAY"
+  // ==========================================
+  const handlePayment = async () => {
+    // Nếu bàn này chưa có ID đơn hàng (do đang xài mock data) thì chặn lại
+    if (!currentTableForBill?.currentOrderId) {
+      alert('Bàn này chưa có đơn hàng thực tế (đang dùng mock data). Hãy tạo đơn hàng cho bàn này trước!');
+      return;
+    }
+
+    if (window.confirm(`Xác nhận thanh toán ${formatCurrency(total)} cho ${currentTableForBill.name}?`)) {
+      setIsProcessing(true);
+      try {
+        await checkoutOrder(currentTableForBill.currentOrderId, 'Cash');
+        alert('✅ Thanh toán thành công! Bàn đã được dọn trống.');
+        
+        // Đóng panel sau khi thanh toán xong
+        closeBillPanel(); 
+        
+        // Note: Chỗ này lý tưởng nhất là báo cho Component cha biết để refresh lại lưới Bàn.
+        // Tạm thời bạn Kiệt có thể bấm nút "Làm mới" hoặc f5 để thấy bàn trống.
+        window.location.reload(); 
+        
+      } catch (error) {
+        alert(error.message || 'Có lỗi xảy ra khi thanh toán.');
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+  // ==========================================
+
   if (!isBillPanelOpen || !currentTableForBill) {
     return null;
   }
@@ -74,7 +108,7 @@ const BillPanel = () => {
               Chi Tiết Hóa Đơn
             </h2>
             <p className="text-xs text-stone-500">
-              {currentTableForBill.name} • Đơn #{currentTableForBill.currentOrderId || 'ORD-092'}
+              {currentTableForBill.name} • Đơn #{currentTableForBill.currentOrderId?.substring(0, 6) || 'ORD-092'}
             </p>
           </div>
 
@@ -94,9 +128,9 @@ const BillPanel = () => {
           </h3>
 
           <div className="space-y-4">
-            {mockOrderItems.map((item) => (
+            {mockOrderItems.map((item, index) => (
               <div
-                key={item.id}
+                key={index}
                 className="flex justify-between items-start bg-white p-3 rounded-xl border border-stone-100 shadow-sm"
               >
                 <div className="flex gap-3">
@@ -155,10 +189,18 @@ const BillPanel = () => {
               In
             </button>
 
-            {/* Proceed to Payment Button */}
-            <button className="py-3 px-4 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 shadow-md hover:shadow-lg transition-all flex justify-center items-center gap-2">
-              Thanh Toán Ngay
-              <Icon icon="solar:arrow-right-linear" />
+            {/* 3. GẮN SỰ KIỆN CLICK VÀO NÚT NÀY */}
+            <button 
+              onClick={handlePayment}
+              disabled={isProcessing}
+              className={`py-3 px-4 rounded-xl text-sm font-medium flex justify-center items-center gap-2 transition-all ${
+                isProcessing 
+                  ? 'bg-stone-400 cursor-not-allowed text-white' 
+                  : 'bg-stone-900 text-white hover:bg-stone-800 shadow-md hover:shadow-lg'
+              }`}
+            >
+              {isProcessing ? 'Đang xử lý...' : 'Thanh Toán Ngay'}
+              {!isProcessing && <Icon icon="solar:arrow-right-linear" />}
             </button>
           </div>
         </div>

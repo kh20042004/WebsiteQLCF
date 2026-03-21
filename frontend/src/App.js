@@ -21,6 +21,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute/PrivateRoute';
 
+
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -32,6 +33,8 @@ import MainLayout from './components/Layout/MainLayout';
 
 // Styles
 import './App.css';
+
+import Dashboard from './pages/Dashboard';
 
 /**
  * Main App Component
@@ -64,6 +67,8 @@ const App = () => {
 
           {/* Trang Đăng Ký */}
           <Route path="/register" element={<Register />} />
+
+          <Route path="/dashboard" element={<Dashboard />} />
 
           {/* ============================================
               PRIVATE ROUTES (Cần xác thực)

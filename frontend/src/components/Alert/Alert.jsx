@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import '../../styles/Alert.css';
+//import '../../styles/Alert.css';
 
 function Alert({ type = 'info', message, onClose, autoClose = null }) {
   const [isVisible, setIsVisible] = useState(true);

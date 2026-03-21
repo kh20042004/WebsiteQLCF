@@ -2,12 +2,13 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { TableProvider } from './context/TableContext';
 import { UIProvider } from './context/UIContext';
-import Header from './components/layout/Header';
-import Footer from './components/layout/Footer';
+import Header from './components/Layout/Header';
+import Footer from './components/Layout/Footer';
 import TablesPage from './pages/TablesPage';
 import MenuPage from './pages/MenuPage';
 import BillPanel from './components/modals/BillPanel';
 import AddTableModal from './components/modals/AddTableModal';
+import ReportsPage from './pages/ReportsPage';
 
 // Placeholder pages for other nav items
 const DashboardPage = () => (
@@ -23,15 +24,6 @@ const OrdersPage = () => (
   <div className="flex-grow flex items-center justify-center text-stone-500">
     <div className="text-center">
       <h2 className="text-2xl font-semibold mb-2">Đơn Hàng Mới</h2>
-      <p>Đang phát triển...</p>
-    </div>
-  </div>
-);
-
-const ReportsPage = () => (
-  <div className="flex-grow flex items-center justify-center text-stone-500">
-    <div className="text-center">
-      <h2 className="text-2xl font-semibold mb-2">Thanh Toán & Báo Cáo</h2>
       <p>Đang phát triển...</p>
     </div>
   </div>
