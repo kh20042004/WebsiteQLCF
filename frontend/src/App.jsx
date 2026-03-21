@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { TableProvider } from './context/TableContext';
 import { UIProvider } from './context/UIContext';
-import Header from './components/Layout/Header';
-import Footer from './components/Layout/Footer';
+import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
 import TablesPage from './pages/TablesPage';
 import BillPanel from './components/modals/BillPanel';
 import AddTableModal from './components/modals/AddTableModal';
@@ -18,7 +18,14 @@ const DashboardPage = () => (
   </div>
 );
 
-import MenuPage from './pages/MenuPage';
+const MenuPage = () => (
+  <div className="flex-grow flex items-center justify-center text-stone-500">
+    <div className="text-center">
+      <h2 className="text-2xl font-semibold mb-2">Quản Lý Thực Đơn</h2>
+      <p>Đang phát triển...</p>
+    </div>
+  </div>
+);
 
 const OrdersPage = () => (
   <div className="flex-grow flex items-center justify-center text-stone-500">
