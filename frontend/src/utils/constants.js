@@ -15,7 +15,7 @@ export const API_ENDPOINTS = {
     LOGIN: '/auth/login',
     PROFILE: '/auth/me',
   },
-  
+
   // Categories
   CATEGORIES: {
     LIST: '/categories',
@@ -50,8 +50,8 @@ export const API_ENDPOINTS = {
 
   // Reports
   REPORTS: {
-    REVENUE: '/reports/revenue',
-    STATISTICS: '/reports/statistics',
+    DAILY: '/reports/daily',
+    TOP_ITEMS: '/reports/top-items',
   },
 };
 
@@ -73,11 +73,11 @@ export const ERROR_MESSAGES = {
   AUTH_REGISTER_FAILED: 'Đăng ký thất bại',
   AUTH_TOKEN_INVALID: 'Token không hợp lệ',
   AUTH_TOKEN_EXPIRED: 'Token đã hết hạn',
-  
+
   // Network errors
   NETWORK_ERROR: 'Lỗi kết nối. Vui lòng kiểm tra lại mạng',
   API_ERROR: 'Lỗi từ máy chủ. Vui lòng thử lại sau',
-  
+
   // Validation errors
   REQUIRED_FIELD: 'Trường bắt buộc không được để trống',
   INVALID_EMAIL: 'Email không hợp lệ',
