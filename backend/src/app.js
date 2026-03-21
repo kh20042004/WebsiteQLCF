@@ -52,12 +52,13 @@ app.get('/', (req, res) => {
 
 
 // Import routes
-//const authRoutes = require('./routes/authRoutes');
+const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 
 // Sử dụng routes
-//app.use('/auth', authRoutes);
+app.use('/auth', authRoutes);
+app.use('/tables', tableRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/products', itemRoutes);
 // Các routes khác sẽ được thêm vào đây (categories, items, tables, orders, etc.)
