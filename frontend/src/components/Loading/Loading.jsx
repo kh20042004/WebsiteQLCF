@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import '../styles/Loading.css';
+import '../../styles/Loading.css';
 
 function Loading({ size = 'medium', color = '#8B4513' }) {
   return (
