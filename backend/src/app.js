@@ -45,10 +45,12 @@ app.get('/', (req, res) => {
 // ---- SỬ DỤNG ROUTES ----
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 // Sử dụng routes
 app.use('/auth', authRoutes);
-// Các routes khác sẽ được thêm vào đây (categories, items, tables, orders, etc.)
+app.use('/orders', orderRoutes);
+// Các routes khác sẽ được thêm vào đây (categories, items, tables, etc.)
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
 app.use((req, res) => {
