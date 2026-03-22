@@ -82,10 +82,10 @@ const BillPanel = () => {
               Chi Tiết Hóa Đơn
             </h2>
             <p className="text-xs text-stone-500">
-              {currentTableForBill.name} • Đơn #{
-                typeof currentTableForBill.currentOrderId === 'object' 
+              {currentTableForBill?.name} • Đơn #{
+                typeof currentTableForBill?.currentOrderId === 'object' && currentTableForBill?.currentOrderId?._id
                   ? currentTableForBill.currentOrderId._id.slice(-6).toUpperCase() 
-                  : (currentTableForBill.currentOrderId || 'N/A')
+                  : 'N/A'
               }
             </p>
           </div>

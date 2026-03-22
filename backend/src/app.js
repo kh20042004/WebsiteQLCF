@@ -38,9 +38,6 @@ app.use(express.urlencoded({ extended: true }));
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-app.use('/api/orders', orderRoutes);
-
-
 // ---- KẾT NỐI DATABASE ----
 connectDB();
 
@@ -56,7 +53,6 @@ app.get('/', (req, res) => {
 // ---- SỬ DỤNG ROUTES ----
 // Import routes
 const authRoutes = require('./routes/authRoutes');
-const orderRoutes = require('./routes/orderRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 const reportRoutes = require('./routes/reportRoutes');

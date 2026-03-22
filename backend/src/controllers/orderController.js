@@ -126,10 +126,31 @@ const removeItemFromOrder = async (req, res, next) => {
   }
 };
 
+// ---------------------------------------------------------------
+// DELETE /orders/:id
+// Xóa đơn hàng
+// ---------------------------------------------------------------
+const deleteOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const order = await orderService.deleteOrder(id);
+
+    return res.status(200).json({
+      status: true,
+      message: 'Xóa đơn hàng thành công',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
   getOrderById,
   addItemToOrder,
   removeItemFromOrder,
+  deleteOrder,
 };

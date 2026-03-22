@@ -15,12 +15,14 @@ export const useTables = () => {
     dispatch({ type: TABLE_ACTIONS.FETCH_TABLES_REQUEST });
 
     try {
-      const tables = await tableService.getAllTables(status);
+      const response = await tableService.getAllTables(status);
+      // Backend returns { count, tables } or array directly
+      const tablesArray = Array.isArray(response) ? response : response.tables || [];
       dispatch({
         type: TABLE_ACTIONS.FETCH_TABLES_SUCCESS,
-        payload: tables.tables || tables
+        payload: tablesArray
       });
-      return { success: true, data: tables };
+      return { success: true, data: response };
     } catch (error) {
       dispatch({
         type: TABLE_ACTIONS.FETCH_TABLES_ERROR,

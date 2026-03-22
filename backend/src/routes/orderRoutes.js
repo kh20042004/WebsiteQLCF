@@ -69,5 +69,12 @@ router.delete(
   handleValidation,
   orderController.removeItemFromOrder
 );
-
+// ---------------------------------------------------------------
+// DELETE /orders/:id
+// Xóa toàn bộ đơn hàng
+// ---------------------------------------------------------------
+router.delete(
+  '/:id',
+  orderController.deleteOrder
+);
 module.exports = router;

@@ -10,3 +10,8 @@ export const getOrders = () => {
 export const checkoutOrder = (orderId, paymentMethod = 'Cash') => {
     return api.post(`${API_ENDPOINTS.ORDERS.LIST}/${orderId}/checkout`, { paymentMethod });
 };
+
+// Xóa đơn hàng
+export const deleteOrder = (orderId) => {
+    return api.delete(`${API_ENDPOINTS.ORDERS.LIST}/${orderId}`);
+};

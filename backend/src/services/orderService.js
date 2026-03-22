@@ -200,10 +200,39 @@ const removeItemFromOrder = async (orderId, orderItemId, quantityToRemove) => {
   return await Order.findById(orderId);
 };
 
+// ---------------------------------------------------------------
+// 6. Xóa đơn hàng
+//    Input : orderId
+//    Output: order đã xóa
+// ---------------------------------------------------------------
+const deleteOrder = async (orderId) => {
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    const error = new Error('Không tìm thấy đơn hàng');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Xóa order khỏi database
+  const deletedOrder = await Order.findByIdAndDelete(orderId);
+
+  // Nếu có table liên kết, cập nhật lại trạng thái bàn
+  if (order.table) {
+    await Table.findByIdAndUpdate(order.table, {
+      status: 'available',
+      currentOrderId: null
+    });
+  }
+
+  return deletedOrder;
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
   getOrderById,
   addItemToOrder,
   removeItemFromOrder,
+  deleteOrder,
 };
