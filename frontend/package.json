@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "description": "Frontend React cho hệ thống quản lý quán cà phê",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -33,3 +34,5 @@
     "vite": "^5.0.8"
   }
 }
+
+

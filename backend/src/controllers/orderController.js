@@ -1,73 +1,135 @@
-const Order = require('../models/Order');
-const Table = require('../models/Table'); // Phải import Table để lát nữa cập nhật
+/**
+ * Controller: orderController
+ *
+ * Nhiệm vụ: Nhận request → gọi service → trả response
+ * Không chứa business logic, chỉ xử lý HTTP layer
+ */
 
-const orderController = {
-    // Hàm tạo đơn hàng (Hôm trước làm để test)
-    createOrder: async (req, res) => {
-        try {
-            const newOrder = new Order(req.body);
-            await newOrder.save();
-            res.status(201).json({ success: true, data: newOrder });
-        } catch (error) {
-            res.status(400).json({ success: false, message: error.message });
-        }
-    },
-    // Lấy danh sách tất cả đơn hàng (Mới nhất lên đầu)
-    getAllOrders: async (req, res) => {
-        try {
-            const orders = await Order.find()
-                .populate('table', 'name') // Lấy thêm tên bàn để UI hiển thị cho đẹp
-                .sort({ createdAt: -1 });  // Sắp xếp đơn mới nhất lên đầu
-            res.status(200).json({ success: true, data: orders });
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    },
+const orderService = require('../services/orderService');
 
-    // Hàm THANH TOÁN (Nhiệm vụ của Anh)
-    // POST /api/orders/:id/checkout
-    checkoutOrder: async (req, res) => {
-        try {
-            const orderId = req.params.id;
-            const { paymentMethod } = req.body; // Ví dụ: 'Cash', 'Transfer', 'Card'
+// ---------------------------------------------------------------
+// POST /orders
+// Tạo đơn hàng mới
+// Body: { tableId, note }
+// ---------------------------------------------------------------
+const createOrder = async (req, res, next) => {
+  try {
+    const { tableId, note, items, totalPrice } = req.body;
+    const userId = req.user?._id; // lấy từ JWT middleware
 
-            // 1. Tìm đơn hàng
-            const order = await Order.findById(orderId);
-            if (!order) {
-                return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng này' });
-            }
+    const order = await orderService.createOrder({ 
+      tableId, 
+      note, 
+      items, 
+      totalPrice, 
+      userId 
+    });
 
-            // 2. Kiểm tra xem đơn đã thanh toán chưa
-            if (order.status === 'Completed') {
-                return res.status(400).json({ success: false, message: 'Đơn hàng này đã được thanh toán rồi!' });
-            }
-
-            // 3. Cập nhật Đơn hàng thành Đã thanh toán
-            order.status = 'Completed';
-            order.paymentMethod = paymentMethod || 'Cash'; // Mặc định là tiền mặt nếu không truyền
-            await order.save();
-
-            // 4. Giải phóng Bàn (Nếu đơn hàng này có khách ngồi tại bàn)
-            if (order.table) {
-                await Table.findByIdAndUpdate(
-                    order.table,
-                    {
-                        status: 'available',    // Chuyển về bàn trống theo chuẩn file Table.js
-                        currentOrderId: null    // Xóa liên kết đơn hàng
-                    }
-                );
-            }
-
-            res.status(200).json({
-                success: true,
-                message: 'Thanh toán thành công! Đã giải phóng bàn.',
-                data: order
-            });
-
-        } catch (error) {
-            res.status(500).json({ success: false, message: 'Lỗi khi thanh toán', error: error.message });
-        }
-    }
+    return res.status(201).json({
+      status: true,
+      message: 'Tạo đơn hàng thành công',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
-module.exports = orderController;
+// ---------------------------------------------------------------
+// GET /orders
+// Lấy danh sách tất cả đơn hàng
+// Query: ?status=pending|serving|done|cancelled
+// ---------------------------------------------------------------
+const getAllOrders = async (req, res, next) => {
+  try {
+    const { status, tableId } = req.query;
+
+    const orders = await orderService.getAllOrders({ status, tableId });
+
+    return res.status(200).json({
+      status: true,
+      message: 'Lấy danh sách đơn hàng thành công',
+      data: orders,
+      total: orders.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ---------------------------------------------------------------
+// GET /orders/:id
+// Lấy chi tiết 1 đơn hàng (có populate bàn, món, người tạo)
+// ---------------------------------------------------------------
+const getOrderById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const order = await orderService.getOrderById(id);
+
+    return res.status(200).json({
+      status: true,
+      message: 'Lấy chi tiết đơn hàng thành công',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ---------------------------------------------------------------
+// POST /orders/:id/items
+// Thêm món vào đơn hàng
+// Body: { itemId, quantity, price, name }
+// ---------------------------------------------------------------
+const addItemToOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { itemId, quantity, price, name } = req.body;
+
+    const order = await orderService.addItemToOrder(id, {
+      itemId,
+      quantity,
+      price,
+      name,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: 'Thêm món vào đơn hàng thành công',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ---------------------------------------------------------------
+// DELETE /orders/:id/items/:itemId
+// Xóa món khỏi đơn hàng
+// :itemId ở đây là _id của subdocument trong items[]
+// ---------------------------------------------------------------
+const removeItemFromOrder = async (req, res, next) => {
+  try {
+    const { id, itemId } = req.params;
+    const { quantity } = req.body; // Lấy tuỳ chọn số lượng xóa từ Body
+
+    const order = await orderService.removeItemFromOrder(id, itemId, quantity);
+
+    return res.status(200).json({
+      status: true,
+      message: 'Xóa món khỏi đơn hàng thành công',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  createOrder,
+  getAllOrders,
+  getOrderById,
+  addItemToOrder,
+  removeItemFromOrder,
+};
