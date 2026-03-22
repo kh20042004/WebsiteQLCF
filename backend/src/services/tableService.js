@@ -9,6 +9,13 @@ class TableService {
   async getAllTables(filter = {}) {
     try {
       const tables = await Table.find(filter)
+        .populate({
+          path: 'currentOrderId',
+          populate: {
+            path: 'items.item',
+            model: 'Item'
+          }
+        })
         .sort({ name: 1 });
       return tables;
     } catch (error) {
@@ -23,7 +30,13 @@ class TableService {
    */
   async getTableById(tableId) {
     try {
-      const table = await Table.findById(tableId);
+      const table = await Table.findById(tableId).populate({
+        path: 'currentOrderId',
+        populate: {
+          path: 'items.item',
+          model: 'Item'
+        }
+      });
       if (!table) {
         throw new Error('Bàn không tồn tại');
       }

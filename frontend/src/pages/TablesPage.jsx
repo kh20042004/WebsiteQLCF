@@ -3,6 +3,7 @@ import useTables from '../hooks/useTables';
 import useModal from '../hooks/useModal';
 import TableGrid from '../components/tables/TableGrid';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import OrderMenuModal from '../components/modals/OrderMenuModal';
 import EditTableModal from '../components/modals/EditTableModal';
 
 const TablesPage = () => {
@@ -38,6 +39,10 @@ const TablesPage = () => {
   const [editingTable, setEditingTable] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // State for order creation
+  const [orderingTable, setOrderingTable] = useState(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+
   // Fetch data on component mount
   useEffect(() => {
     fetchTables();
@@ -45,23 +50,15 @@ const TablesPage = () => {
   }, []);
 
   // Callback handlers for table actions
-  const handleCreateOrder = async (table) => {
-    console.log('Create order for table:', table.name);
+  const handleCreateOrder = (table) => {
+    setOrderingTable(table);
+    setIsOrderModalOpen(true);
+  };
 
-    try {
-      // Update table status to occupied
-      const result = await updateTableStatus(table._id, 'occupied');
-
-      if (result.success) {
-        showSuccessNotification(`Đã tạo đơn hàng cho ${table.name}`);
-        // TODO: Navigate to order creation page or open order modal
-      } else {
-        showErrorNotification(`Lỗi: ${result.error}`);
-      }
-    } catch (error) {
-      showErrorNotification('Có lỗi xảy ra khi tạo đơn hàng');
-      console.error('Error creating order:', error);
-    }
+  const onOrderSuccess = (message) => {
+    showSuccessNotification(message);
+    fetchTables(); // Refresh table data
+    fetchStats();
   };
 
   const handleCancelReservation = async (table) => {
@@ -290,6 +287,16 @@ const TablesPage = () => {
         onCancel={cancelConfirmDialog}
         variant="danger"
       />
+
+      {/* Order Menu Modal */}
+      {orderingTable && (
+        <OrderMenuModal
+          table={orderingTable}
+          isOpen={isOrderModalOpen}
+          onClose={() => setIsOrderModalOpen(false)}
+          onSuccess={onOrderSuccess}
+        />
+      )}
 
       {/* Edit Table Modal */}
       <EditTableModal

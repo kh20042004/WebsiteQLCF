@@ -14,10 +14,16 @@ const orderService = require('../services/orderService');
 // ---------------------------------------------------------------
 const createOrder = async (req, res, next) => {
   try {
-    const { tableId, note } = req.body;
-    const userId = req.user?._id; // lấy từ JWT middleware (Khánh làm)
+    const { tableId, note, items, totalPrice } = req.body;
+    const userId = req.user?._id; // lấy từ JWT middleware
 
-    const order = await orderService.createOrder({ tableId, note, userId });
+    const order = await orderService.createOrder({ 
+      tableId, 
+      note, 
+      items, 
+      totalPrice, 
+      userId 
+    });
 
     return res.status(201).json({
       status: true,

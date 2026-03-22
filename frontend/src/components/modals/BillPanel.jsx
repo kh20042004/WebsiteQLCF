@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import useModal from '../../hooks/useModal';
+import CheckoutModal from './CheckoutModal';
+import { useTableDispatch, TABLE_ACTIONS } from '../../context/TableContext';
+import { apiGet } from '../../services/api';
 
 /**
  * BillPanel Component - Sliding side panel để hiển thị hóa đơn
@@ -8,6 +11,8 @@ import useModal from '../../hooks/useModal';
  */
 const BillPanel = () => {
   const { isBillPanelOpen, currentTableForBill, closeBillPanel } = useModal();
+  const dispatch = useTableDispatch();
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Mock order data for demonstration
   const mockOrderItems = [
@@ -37,8 +42,11 @@ const BillPanel = () => {
     }
   ];
 
-  // Calculate totals
-  const subtotal = mockOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // Calculate totals from REAL data
+  const currentOrder = typeof currentTableForBill?.currentOrderId === 'object' ? currentTableForBill.currentOrderId : null;
+  const orderItems = currentOrder?.items || [];
+  
+  const subtotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const taxRate = 0.08; // 8%
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
@@ -74,7 +82,11 @@ const BillPanel = () => {
               Chi Tiết Hóa Đơn
             </h2>
             <p className="text-xs text-stone-500">
-              {currentTableForBill.name} • Đơn #{currentTableForBill.currentOrderId || 'ORD-092'}
+              {currentTableForBill.name} • Đơn #{
+                typeof currentTableForBill.currentOrderId === 'object' 
+                  ? currentTableForBill.currentOrderId._id.slice(-6).toUpperCase() 
+                  : (currentTableForBill.currentOrderId || 'N/A')
+              }
             </p>
           </div>
 
@@ -94,28 +106,37 @@ const BillPanel = () => {
           </h3>
 
           <div className="space-y-4">
-            {mockOrderItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex justify-between items-start bg-white p-3 rounded-xl border border-stone-100 shadow-sm"
-              >
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-stone-50 border border-stone-100 flex items-center justify-center flex-shrink-0 text-stone-600">
-                    <Icon icon={item.icon} className="text-lg" />
+            {/* Sử dụng dữ liệu thật từ Order nếu có */}
+            {typeof currentTableForBill.currentOrderId === 'object' && currentTableForBill.currentOrderId.items ? (
+              currentTableForBill.currentOrderId.items.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex justify-between items-start bg-white p-3 rounded-xl border border-stone-100 shadow-sm"
+                >
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-stone-50 border border-stone-100 flex items-center justify-center flex-shrink-0 text-stone-600">
+                      <Icon icon="solar:cup-hot-linear" className="text-lg" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-stone-900 line-clamp-1">
+                        {item.name || (item.item && typeof item.item === 'object' ? item.item.name : 'Món không tên')}
+                      </h4>
+                      <p className="text-[11px] text-stone-500 mt-1 uppercase font-medium tracking-wide">
+                        {item.item && typeof item.item === 'object' && item.item.category ? item.item.category.name : 'Thực đơn'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-stone-900">{item.name}</h4>
-                    <p className="text-[11px] text-stone-500 mt-0.5">{item.description}</p>
+                  <div className="text-right">
+                    <span className="block text-sm font-medium text-stone-900">
+                      {formatCurrency(item.price)}
+                    </span>
+                    <span className="text-[11px] text-stone-500">SL: {item.quantity}</span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="block text-sm font-medium text-stone-900">
-                    {formatCurrency(item.price)}
-                  </span>
-                  <span className="text-[11px] text-stone-500">SL: {item.quantity}</span>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-stone-400 text-center py-4 italic">Chưa có món nào</p>
+            )}
           </div>
 
           {/* Note section */}
@@ -155,14 +176,38 @@ const BillPanel = () => {
               In
             </button>
 
-            {/* Proceed to Payment Button */}
-            <button className="py-3 px-4 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 shadow-md hover:shadow-lg transition-all flex justify-center items-center gap-2">
+            <button 
+              onClick={() => setIsCheckoutOpen(true)}
+              className="py-3 px-4 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 shadow-md hover:shadow-lg transition-all flex justify-center items-center gap-2"
+            >
               Thanh Toán Ngay
               <Icon icon="solar:arrow-right-linear" />
             </button>
           </div>
         </div>
       </div>
+
+      {/* Checkout Modal Integration */}
+      <CheckoutModal 
+        isOpen={isCheckoutOpen}
+        order={currentOrder}
+        onClose={() => setIsCheckoutOpen(false)}
+        onConfirm={(payload) => {
+          console.log("PAYLOAD THANH TOÁN:", payload);
+          // Hiển thị thông báo thành công (Bạn có thể dùng Toast thay vì Alert)
+          alert(`🎉 THANH TOÁN THÀNH CÔNG!\n- Tổng tiền: ${payload.grandTotal.toLocaleString()}₫\n- Phương thức: ${payload.paymentMethod.toUpperCase()}`);
+          
+          setIsCheckoutOpen(false);
+          closeBillPanel();
+          
+          // Refresh lại sơ đồ bàn bằng cách gọi lại API và dispatch
+          apiGet('/tables').then(res => {
+            if (res) {
+              dispatch({ type: TABLE_ACTIONS.FETCH_TABLES_SUCCESS, payload: res });
+            }
+          });
+        }}
+      />
     </>
   );
 };

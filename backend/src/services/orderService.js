@@ -18,24 +18,47 @@ const recalculateTotal = (items) => {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 };
 
+const Table = require('../models/Table');
+
 // ---------------------------------------------------------------
 // 1. Tạo đơn hàng mới
-//    Input : { tableId, note, userId }
+//    Input : { tableId, items, totalPrice, note, userId }
 //    Output: order document vừa tạo
 // ---------------------------------------------------------------
-const createOrder = async ({ tableId, note, userId }) => {
-  const order = new Order({
-    table: tableId,
-    note: note || '',
-    createdBy: userId || null,
-    items: [],
-    totalPrice: 0,
-    status: 'pending',
-  });
+const createOrder = async ({ tableId, items, totalPrice, note, userId }) => {
+  // 1. Kiểm tra xem bàn đã có đơn hàng hiện tại chưa
+  const table = await Table.findById(tableId);
+  const existingOrderId = table?.currentOrderId;
 
-  await order.save();
+  let order;
+  if (existingOrderId) {
+    // Nếu đã có, Cập nhật đơn hàng cũ
+    order = await Order.findByIdAndUpdate(existingOrderId, {
+      items: items || [],
+      totalPrice: totalPrice || 0,
+      note: note || '',
+      status: 'pending' // Reset về pending nếu cần
+    }, { new: true });
+  } else {
+    // Nếu chưa có, tạo Order mới
+    order = new Order({
+      table: tableId,
+      note: note || '',
+      createdBy: userId || null,
+      items: items || [],
+      totalPrice: totalPrice || 0,
+      status: 'pending',
+    });
+    await order.save();
 
-  // Trả về order gốc
+    // Cập nhật thông tin bàn: trạng thái và order hiện tại
+    await Table.findByIdAndUpdate(tableId, {
+      status: 'occupied',
+      currentOrderId: order._id
+    });
+  }
+
+  // Trả về order đầy đủ
   return await Order.findById(order._id);
 };
 

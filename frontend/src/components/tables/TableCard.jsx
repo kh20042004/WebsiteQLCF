@@ -151,6 +151,38 @@ const TableCard = ({
                 role="menu"
                 aria-labelledby={`table-${table._id}-menu-button`}
               >
+                {/* Chỉnh sửa món ăn (Chỉ khi đang dùng) */}
+                {table.status === 'occupied' && (
+                  <button
+                    onClick={() => {
+                      onCreateOrder(table); // Tận dụng callback tạo đơn để sửa đơn
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2 transition-colors focus-visible-enhanced"
+                    role="menuitem"
+                  >
+                    <Icon icon="solar:tea-cup-outline" className="text-amber-500" />
+                    Chỉnh sửa món
+                  </button>
+                )}
+
+                {/* Xem chi tiết bàn (Chỉ khi đang dùng hoặc đã đặt) */}
+                {table.status !== 'available' && (
+                  <button
+                    onClick={() => {
+                      handleCalculateBill();
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 flex items-center gap-2 transition-colors focus-visible-enhanced"
+                    role="menuitem"
+                  >
+                    <Icon icon="solar:eye-outline" className="text-stone-500" />
+                    Xem chi tiết
+                  </button>
+                )}
+
+                <div className="h-px bg-stone-100 my-1 mx-2"></div>
+
                 <button
                   onClick={handleEditTable}
                   onKeyDown={(e) => {
@@ -166,7 +198,7 @@ const TableCard = ({
                   aria-label={`Chỉnh sửa thông tin ${table.name}`}
                 >
                   <Icon icon="solar:pen-outline" className="text-stone-500" aria-hidden="true" />
-                  Chỉnh sửa
+                  Quản lý bàn
                 </button>
                 <button
                   onClick={handleDeleteTable}
@@ -185,6 +217,7 @@ const TableCard = ({
                   <Icon icon="solar:trash-bin-trash-outline" className="text-red-500" aria-hidden="true" />
                   Xóa bàn
                 </button>
+
               </div>
             </>
           )}
@@ -255,52 +288,36 @@ const AvailableContent = () => (
 );
 
 const OccupiedContent = ({ table }) => {
-  // Create consistent mock data based on table ID (instead of random)
-  const createConsistentMockData = (tableId) => {
-    // Simple hash function to convert table ID to consistent numbers
-    let hash = 0;
-    for (let i = 0; i < tableId.length; i++) {
-      const char = tableId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-
-    // Use hash to generate consistent but seemingly random values
-    const seed1 = Math.abs(hash) % 1000;
-    const seed2 = Math.abs(hash * 2) % 5 + 1;
-    const seed3 = Math.abs(hash * 3) % 400000 + 100000;
-
-    return {
-      orderId: `#ORD-${seed1.toString().padStart(3, '0')}`,
-      itemCount: seed2,
-      total: seed3
-    };
-  };
-
-  const mockOrderData = table.currentOrderId
-    ? { orderId: table.currentOrderId, itemCount: 3, total: 250000 }
-    : createConsistentMockData(table._id);
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
   };
 
+  // Lấy dữ liệu từ order hiện tại (nếu đã được populate)
+  const currentOrder = table.currentOrderId;
+  const isPopulated = currentOrder && typeof currentOrder === 'object';
+
+  const orderData = {
+    orderId: isPopulated ? (currentOrder.orderNo || `#${currentOrder._id.slice(-6).toUpperCase()}`) : (currentOrder || 'N/A'),
+    itemCount: isPopulated ? (currentOrder.items?.length || 0) : 0,
+    total: isPopulated ? (currentOrder.totalPrice || 0) : 0
+  };
+
   return (
-    <div className="flex-grow flex flex-col justify-center space-y-2.5">
-      <div className="flex justify-between items-end text-sm">
-        <span className="text-stone-500 text-xs">Mã Đơn</span>
-        <a href="#" className="font-medium text-stone-800 hover:text-amber-600 transition-colors">
-          {mockOrderData.orderId}
-        </a>
+    <div className="flex-grow flex flex-col justify-center space-y-2.5 bg-white/50 rounded-xl p-3 border border-stone-100">
+      <div className="flex justify-between items-center text-sm">
+        <span className="text-stone-400 text-[11px] font-bold uppercase tracking-wider">Mã Đơn</span>
+        <span className="font-bold text-stone-800 tracking-tight">
+          {orderData.orderId}
+        </span>
       </div>
-      <div className="flex justify-between items-end text-sm">
-        <span className="text-stone-500 text-xs">Món</span>
-        <span className="font-medium text-stone-800">{mockOrderData.itemCount} Món</span>
+      <div className="flex justify-between items-center text-sm">
+        <span className="text-stone-400 text-[11px] font-bold uppercase tracking-wider">Món</span>
+        <span className="font-bold text-stone-800">{orderData.itemCount} Món</span>
       </div>
-      <div className="flex justify-between items-end text-sm">
-        <span className="text-stone-500 text-xs">Tổng Tạm Tính</span>
-        <span className="font-semibold text-stone-900 text-base">
-          {formatCurrency(mockOrderData.total)}
+      <div className="flex justify-between items-end text-sm pt-1">
+        <span className="text-stone-400 text-[11px] font-bold uppercase tracking-wider">Tổng Tạm Tính</span>
+        <span className="font-black text-amber-600 text-lg">
+          {formatCurrency(orderData.total)}
         </span>
       </div>
     </div>
