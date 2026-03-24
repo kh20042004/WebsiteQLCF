@@ -76,8 +76,16 @@ app.use((req, res) => {
 });
 
 
-// const handleError = require('./middlewares/handleError');
-// app.use(handleError);
+// ---- GLOBAL ERROR HANDLER ----
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  console.error(`❌ [${statusCode}] ${err.message}`);
+  res.status(statusCode).json({
+    status: false,
+    message: err.message || 'Lỗi server',
+  });
+});
+
 
 // ---- KHỞI ĐỘNG SERVER ----
 const PORT = process.env.PORT || 3000;

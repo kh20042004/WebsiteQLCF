@@ -73,6 +73,7 @@ const getAllOrders = async ({ status, tableId } = {}) => {
   if (tableId) filter.table = tableId; // Tính năng mới: Tìm đơn hàng theo ID Bàn
 
   return await Order.find(filter)
+    .populate('table', 'name capacity') // populate tên bàn để frontend hiển thị
     .sort({ createdAt: -1 }); // mới nhất lên đầu
 };
 
@@ -228,6 +229,91 @@ const deleteOrder = async (orderId) => {
   return deletedOrder;
 };
 
+// ---------------------------------------------------------------
+// 7. Checkout đơn hàng (Thanh toán)
+//    Input : orderId, paymentMethod
+//    Output: order đã thanh toán
+// ---------------------------------------------------------------
+const checkoutOrder = async (orderId, paymentMethod = 'Cash') => {
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    const error = new Error('Không tìm thấy đơn hàng');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (order.status === 'done') {
+    const error = new Error('Đơn hàng này đã được thanh toán rồi');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (order.status === 'cancelled') {
+    const error = new Error('Không thể thanh toán đơn hàng đã hủy');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Cập nhật trạng thái đơn hàng → done
+  order.status = 'done';
+  await order.save();
+
+  // Giải phóng bàn: trạng thái → available, xóa currentOrderId
+  if (order.table) {
+    await Table.findByIdAndUpdate(order.table, {
+      status: 'available',
+      currentOrderId: null,
+    });
+  }
+
+  return order;
+};
+
+// ---------------------------------------------------------------
+// 8. Cập nhật trạng thái đơn hàng
+//    Input : orderId, status mới (pending | serving | done | cancelled)
+//    Output: order đã được cập nhật
+// ---------------------------------------------------------------
+const updateOrderStatus = async (orderId, newStatus) => {
+  // Danh sách trạng thái hợp lệ theo enum trong Order model
+  const VALID_STATUSES = ['pending', 'serving', 'done', 'cancelled'];
+
+  // Kiểm tra trạng thái mới có hợp lệ không
+  if (!VALID_STATUSES.includes(newStatus)) {
+    const error = new Error(`Trạng thái không hợp lệ. Chỉ chấp nhận: ${VALID_STATUSES.join(', ')}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    const error = new Error('Không tìm thấy đơn hàng');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Không cho phép thay đổi đơn đã hoàn thành hoặc đã hủy
+  if (order.status === 'done') {
+    const error = new Error('Không thể thay đổi trạng thái đơn đã thanh toán');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (order.status === 'cancelled') {
+    const error = new Error('Không thể thay đổi trạng thái đơn đã hủy');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Cập nhật trạng thái mới
+  order.status = newStatus;
+  await order.save();
+
+  return order;
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -235,4 +321,7 @@ module.exports = {
   addItemToOrder,
   removeItemFromOrder,
   deleteOrder,
+  checkoutOrder,
+  updateOrderStatus,
 };
+

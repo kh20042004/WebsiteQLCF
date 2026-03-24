@@ -146,6 +146,58 @@ const deleteOrder = async (req, res, next) => {
   }
 };
 
+// ---------------------------------------------------------------
+// POST /orders/:id/checkout
+// Thanh toán đơn hàng
+// Body: { paymentMethod }
+// ---------------------------------------------------------------
+const checkoutOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { paymentMethod } = req.body;
+
+    const order = await orderService.checkoutOrder(id, paymentMethod);
+
+    return res.status(200).json({
+      status: true,
+      message: 'Thanh toán thành công! Đã giải phóng bàn.',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ---------------------------------------------------------------
+// PATCH /orders/:id/status
+// Cập nhật trạng thái đơn hàng (pending → serving → done | cancelled)
+// Body: { status }
+// ---------------------------------------------------------------
+const updateOrderStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Kiểm tra body có truyền status không
+    if (!status) {
+      return res.status(400).json({
+        status: false,
+        message: 'Vui lòng cung cấp trạng thái mới (status)',
+      });
+    }
+
+    const order = await orderService.updateOrderStatus(id, status);
+
+    return res.status(200).json({
+      status: true,
+      message: `Cập nhật trạng thái thành công: ${status}`,
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -153,4 +205,6 @@ module.exports = {
   addItemToOrder,
   removeItemFromOrder,
   deleteOrder,
+  checkoutOrder,
+  updateOrderStatus,
 };

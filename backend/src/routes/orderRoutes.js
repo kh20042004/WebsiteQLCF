@@ -47,6 +47,21 @@ router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
 
 // ---------------------------------------------------------------
+// POST /orders/:id/checkout
+// Thanh toán đơn hàng
+// Body: { paymentMethod }
+// ---------------------------------------------------------------
+router.post('/:id/checkout', orderController.checkoutOrder);
+
+// ---------------------------------------------------------------
+// PATCH /orders/:id/status
+// Cập nhật trạng thái đơn hàng
+// Body: { status: 'pending' | 'serving' | 'done' | 'cancelled' }
+// ---------------------------------------------------------------
+router.patch('/:id/status', orderController.updateOrderStatus);
+
+
+// ---------------------------------------------------------------
 // POST /orders/:id/items
 // Thêm món vào đơn hàng
 // Body: { itemId, quantity, price, name }

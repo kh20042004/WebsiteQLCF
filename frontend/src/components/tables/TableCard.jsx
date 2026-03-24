@@ -75,7 +75,7 @@ const TableCard = ({
 
   // Style classes based on status
   const getCardClasses = () => {
-    const baseClasses = "group relative rounded-2xl border p-5 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] transition-enhanced flex flex-col h-[220px] animate-pop card-hover";
+    const baseClasses = "group relative rounded-2xl border p-5 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] transition-enhanced flex flex-col min-h-[220px] animate-pop card-hover";
 
     switch (table.status) {
       case 'available':

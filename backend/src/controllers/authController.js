@@ -13,14 +13,15 @@ const authService = require('../services/authService');
 const register = async (req, res) => {
   try {
     // Lấy dữ liệu từ body request
-    const { name, email, password, confirmPassword } = req.body;
+    // Chấp nhận cả 2 tên field: 'confirmPassword' (AuthContext cũ) và 'passwordConfirm' (frontend service mới)
+    const { name, email, password, confirmPassword, passwordConfirm } = req.body;
 
-    // Gọi service để đăng ký
+    // Gọi service để đăng ký — truyền cả 2 để service tự chọn
     const user = await authService.register({
       name,
       email,
       password,
-      confirmPassword,
+      confirmPassword: confirmPassword || passwordConfirm, // fallback sang passwordConfirm nếu không có
     });
 
     // Trả về response thành công

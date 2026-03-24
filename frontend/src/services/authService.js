@@ -43,13 +43,12 @@ const AUTH_URL = '/auth';
  */
 export const login = async (email, password) => {
   try {
-    const response = await api.post(`${AUTH_URL}/login`, {
-      email,
-      password,
-    });
-    return response.data;
+    // api.js interceptor đã extract response.data.data
+    // → response trả về từ api.post() là { token, user } trực tiếp
+    // KHÔNG gọi thêm .data vì sẽ ra undefined
+    const response = await api.post(`${AUTH_URL}/login`, { email, password });
+    return response; // { token, user: { id, name, email, role } }
   } catch (error) {
-    // Re-throw error để component handle
     throw error;
   }
 };

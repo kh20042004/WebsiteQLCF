@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Clock, CheckCircle2, AlertCircle, Trash2, Eye } from 'lucide-react';
-import { getOrders, deleteOrder } from '../services/orderService';
+import { getOrders, deleteOrder, updateOrderStatus } from '../services/orderService';
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -10,13 +10,17 @@ const OrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // State cho dialog xóa
   const [notification, setNotification] = useState(null); // State cho notification
+  const [currentPage, setCurrentPage] = useState(1);  // Trang hiện tại (bắt đầu từ 1)
+
+  // Số đơn hiển thị mỗi trang
+  const PAGE_SIZE = 10;
 
   // Fetch orders từ API
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const data = await getOrders();
-      console.log('Orders data:', data);
+      // Dữ liệu đơn hàng đã được tải thành công
       const ordersArray = Array.isArray(data) ? data : data.orders || [];
       setOrders(ordersArray);
       setError(null);
@@ -31,6 +35,27 @@ const OrdersPage = () => {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  /**
+   * Cập nhật trạng thái đơn hàng
+   * Chỉ cho phép đổi trạng thái khi đơn chưa 'done' hay 'cancelled'
+   * @param {string} orderId - ID đơn cần cập nhật
+   * @param {string} newStatus - Trạng thái mới
+   */
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      // Cập nhật state local ngay lập tức để UI phản hồi nhanh (không cần fetch lại)
+      setOrders(prev =>
+        prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o)
+      );
+      setNotification({ type: 'success', message: `Đã cập nhật trạng thái đơn hàng!` });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (err) {
+      setNotification({ type: 'error', message: `Lỗi cập nhật: ${err.message}` });
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
 
   // Hàm xóa đơn hàng
   const handleDeleteOrder = async (orderId) => {
@@ -56,10 +81,19 @@ const OrdersPage = () => {
     }
   };
 
-  // Filter orders
-  const filteredOrders = filter === 'all' 
-    ? orders 
+  // Lọc đơn theo trạng thái đang chọn
+  const filteredOrders = filter === 'all'
+    ? orders
     : orders.filter(o => o.status === filter);
+
+  // Tổng số trang dựa trên danh sách đã lọc
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+
+  // Cắt danh sách để chỉ hiển thị đúng 10 đơn của trang hiện tại
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   // Status badge styles
   const getStatusBadge = (status) => {
@@ -177,7 +211,10 @@ const OrdersPage = () => {
         ].map(btn => (
           <button
             key={btn.value}
-            onClick={() => setFilter(btn.value)}
+            onClick={() => {
+              setFilter(btn.value);    // Đổi filter
+              setCurrentPage(1);       // Reset về trang 1 để tránh hiện trang trống
+            }}
             className={`px-4 py-2 rounded-lg transition-colors font-medium ${
               filter === btn.value
                 ? 'bg-amber-600 text-white'
@@ -189,7 +226,17 @@ const OrdersPage = () => {
         ))}
       </div>
 
-      {/* Orders Table/List */}
+      {/* Thông tin trang + tổng số đơn */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-stone-500">
+          Hiển thị <span className="font-semibold text-stone-700">{filteredOrders.length}</span> đơn hàng
+          {totalPages > 1 && (
+            <span> · Trang <span className="font-semibold text-stone-700">{currentPage}</span> / {totalPages}</span>
+          )}
+        </p>
+      </div>
+
+      {/* Orders List */}
       {filteredOrders.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-stone-200">
           <Clock className="w-12 h-12 mx-auto mb-3 text-stone-400" />
@@ -198,7 +245,7 @@ const OrdersPage = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredOrders.map((order) => {
+          {paginatedOrders.map((order) => {
             const statusConfig = getStatusBadge(order.status);
             const itemCount = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
             
@@ -249,26 +296,116 @@ const OrdersPage = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+
+                    {/* Dropdown đổi trạng thái — ẩn nếu đã done hoặc cancelled */}
+                    {order.status !== 'done' && order.status !== 'cancelled' && (
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
+                        className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white text-stone-700 hover:border-amber-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors cursor-pointer"
+                        title="Cập nhật trạng thái"
+                      >
+                        {/* Chỉ hiển thị trạng thái hợp lệ có thể chuyển sang */}
+                        <option value="pending">⏳ Chờ xử lý</option>
+                        <option value="serving">🍽 Đang phục vụ</option>
+                        <option value="cancelled">✕ Hủy đơn</option>
+                      </select>
+                    )}
+
+                    {/* Nút xem chi tiết */}
                     <button
                       onClick={() => setSelectedOrder(order)}
                       className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-600"
-                      title="Chi tiết"
+                      title="Xem chi tiết"
                     >
                       <Eye className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={() => setConfirmDelete(order._id)}
-                      className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+
+                    {/* Nút xóa — chỉ hiển thị cho đơn chưa done */}
+                    {order.status !== 'done' && (
+                      <button
+                        onClick={() => setConfirmDelete(order._id)}
+                        className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+                        title="Xóa đơn"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ---- THANH PHÂN TRANG ---- */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+
+          {/* Nút Trang đầu */}
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm font-medium disabled:opacity-40 hover:bg-stone-50 transition-colors"
+          >
+            «
+          </button>
+
+          {/* Nút Trang trước */}
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm font-medium disabled:opacity-40 hover:bg-stone-50 transition-colors"
+          >
+            ‹ Trước
+          </button>
+
+          {/* Số trang — hiển thị tối đa 5 trang xung quanh trang hiện tại */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+            .reduce((acc, p, i, arr) => {
+              // Chèn "..." giữa các số trang không liên tiếp
+              if (i > 0 && p - arr[i - 1] > 1) acc.push('...');
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) =>
+              p === '...' ? (
+                <span key={`ellipsis-${i}`} className="px-2 text-stone-400">...</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setCurrentPage(p)}
+                  className={`w-9 h-9 rounded-lg border text-sm font-medium transition-colors ${
+                    currentPage === p
+                      ? 'bg-amber-600 text-white border-amber-600'
+                      : 'border-stone-200 text-stone-700 hover:bg-stone-50'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+
+          {/* Nút Trang tiếp */}
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm font-medium disabled:opacity-40 hover:bg-stone-50 transition-colors"
+          >
+            Tiếp ›
+          </button>
+
+          {/* Nút Trang cuối */}
+          <button
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm font-medium disabled:opacity-40 hover:bg-stone-50 transition-colors"
+          >
+            »
+          </button>
         </div>
       )}
 
