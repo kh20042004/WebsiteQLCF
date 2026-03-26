@@ -45,4 +45,19 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
+// ---- NAMED EXPORTS (tương thích với cả cách dùng cũ và mới) ----
+
+// uploadSingle: nhận 1 ảnh, field name = "image"
+// Dùng trong: itemRoutes (tạo/sửa món), uploadRoutes (upload ảnh đơn)
+const uploadSingle = upload.single('image');
+
+// uploadMultiple: nhận nhiều ảnh, field name = "images", tối đa 10 file
+// Dùng trong: uploadRoutes (upload nhiều ảnh cùng lúc)
+const uploadMultiple = upload.array('images', 10);
+
+// Default export: tương thích ngược (ai đang dùng `upload.single()` trực tiếp)
 module.exports = upload;
+
+// Named exports: cho các file import theo dạng { uploadSingle }
+module.exports.uploadSingle = uploadSingle;
+module.exports.uploadMultiple = uploadMultiple;
