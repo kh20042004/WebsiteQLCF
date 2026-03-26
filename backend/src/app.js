@@ -17,9 +17,14 @@ const orderRoutes = require('./routes/orderRoutes');
 
 // ---- IMPORT ROUTES ----
 const tableRoutes = require('./routes/tableRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // ---- LOAD BIẾN MÔI TRƯỜNG TỪ .env ----
 dotenv.config();
+
+// ---- KHỞI TẠO CLOUDINARY (đọc từ .env) ----
+// Import cloudinary config để cấu hình trước khi dùng trong controllers
+require('./config/cloudinary');
 
 // ---- KHỞI TẠO EXPRESS APP ----
 const app = express();
@@ -65,6 +70,7 @@ app.use('/api/tables', tableRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/upload', uploadRoutes); // Route upload ảnh Cloudinary
 
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
