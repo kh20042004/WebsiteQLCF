@@ -1,63 +1,75 @@
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
 /**
- * Cấu hình Multer để lưu trữ ảnh sản phẩm
+ * File: config/multer.js
+ *
+ * Nhiệm vụ:
+ * - Cấu hình Multer để nhận file upload từ client (multipart/form-data)
+ * - Dùng memoryStorage (lưu tạm vào RAM) thay vì diskStorage
+ *   → Lý do: Upload trực tiếp lên Cloudinary bằng stream, không cần lưu disk
+ *
+ * Gồm 2 instance multer:
+ * - uploadSingle  : Upload 1 ảnh (field name: "image")
+ * - uploadMultiple: Upload nhiều ảnh cùng lúc (tối đa 10 ảnh, field name: "images")
+ *
+ * Giới hạn:
+ * - Chỉ chấp nhận ảnh: jpg, jpeg, png, webp, gif
+ * - Mỗi file tối đa 10MB
  */
 
-// Đảm bảo thư mục 'uploads' tồn tại
-const uploadDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const multer = require('multer');
+const path = require('path');
 
-// Cấu hình kho lưu trữ (Storage)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // Tạo tên file duy nhất bằng timestamp + tên gốc
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// Bộ lọc file (Chỉ cho phép ảnh)
+// ---- BỘ LỌC FILE (FileFilter) ----
+// Chỉ cho phép các định dạng ảnh hợp lệ
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  // Danh sách định dạng được phép
+  const allowedTypes = /jpeg|jpg|png|webp|gif/;
+
+  // Kiểm tra extension của file
+  const extname = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase()
+  );
+
+  // Kiểm tra mimetype (loại MIME thực sự của file)
   const mimetype = allowedTypes.test(file.mimetype);
 
+  // Chỉ accept khi cả 2 đều hợp lệ (tránh đổi tên file để bypass)
   if (extname && mimetype) {
-    return cb(null, true);
+    return cb(null, true); // Chấp nhận file
   } else {
-    cb(new Error('Chỉ chấp nhận file hình ảnh (.jpg, .jpeg, .png, .webp)'));
+    cb(
+      new Error(
+        'Chỉ chấp nhận file hình ảnh: .jpg, .jpeg, .png, .webp, .gif'
+      )
+    );
   }
 };
 
-const upload = multer({
-  storage: storage,
+// ---- MEMORY STORAGE ----
+// Lưu ảnh vào bộ nhớ RAM tạm thời (buffer)
+// Sau đó stream trực tiếp lên Cloudinary, không tốn dung lượng ổ cứng server
+const memoryStorage = multer.memoryStorage();
+
+// ---- CẤU HÌNH MULTER CHUNG ----
+const multerConfig = {
+  storage: memoryStorage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // Giới hạn 5MB
+    fileSize: 10 * 1024 * 1024, // Giới hạn 10MB mỗi file
   },
-  fileFilter: fileFilter
-});
+  fileFilter: fileFilter,
+};
 
-// ---- NAMED EXPORTS (tương thích với cả cách dùng cũ và mới) ----
+// ---- EXPORT CÁC INSTANCE MULTER ----
 
-// uploadSingle: nhận 1 ảnh, field name = "image"
-// Dùng trong: itemRoutes (tạo/sửa món), uploadRoutes (upload ảnh đơn)
-const uploadSingle = upload.single('image');
+// Upload 1 ảnh duy nhất — field name phải là "image"
+// Dùng cho: upload ảnh sản phẩm, avatar...
+const uploadSingle = multer(multerConfig).single('image');
 
-// uploadMultiple: nhận nhiều ảnh, field name = "images", tối đa 10 file
-// Dùng trong: uploadRoutes (upload nhiều ảnh cùng lúc)
-const uploadMultiple = upload.array('images', 10);
+// Upload nhiều ảnh cùng lúc — field name phải là "images", tối đa 10 file
+// Dùng cho: upload gallery, nhiều ảnh cùng lúc
+const uploadMultiple = multer(multerConfig).array('images', 10);
 
-// Default export: tương thích ngược (ai đang dùng `upload.single()` trực tiếp)
-module.exports = upload;
-
-// Named exports: cho các file import theo dạng { uploadSingle }
-module.exports.uploadSingle = uploadSingle;
-module.exports.uploadMultiple = uploadMultiple;
+module.exports = {
+  uploadSingle,
+  uploadMultiple,
+  multerConfig,
+};
