@@ -1,5 +1,6 @@
 import React from 'react';
 import { Edit3, Trash2, Image as ImageIcon, Search, Tag, DollarSign, ListFilter, AlertCircle } from 'lucide-react';
+import { BASE_URL } from '../../utils/constants';
 
 const MenuTable = ({ items, onEdit, onDelete, isLoading }) => {
   // Định dạng tiền tệ VNĐ
@@ -57,7 +58,7 @@ const MenuTable = ({ items, onEdit, onDelete, isLoading }) => {
                   <div className="w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 flex items-center justify-center group-hover:scale-105 transition-transform">
                     {item.image ? (
                       <img 
-                        src={item.image} 
+                        src={item.image.startsWith('http') ? item.image : `${BASE_URL}${item.image}`} 
                         alt={item.name} 
                         className="w-full h-full object-cover"
                         onError={(e) => { e.target.src = 'https://placehold.co/100x100?text=No+Img'; }}
@@ -80,10 +81,17 @@ const MenuTable = ({ items, onEdit, onDelete, isLoading }) => {
 
                 {/* Danh mục */}
                 <td className="px-6 py-4.5">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-xs font-medium border border-stone-200">
-                    <Tag size={12} />
-                    {item.category?.name || 'Chưa phân loại'}
-                  </span>
+                  {item.category ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-xs font-medium border border-stone-200">
+                      <Tag size={12} />
+                      {item.category.name}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-50 text-stone-400 rounded-full text-xs font-medium border border-stone-100 italic">
+                      <Tag size={12} className="opacity-50" />
+                      Chưa phân loại
+                    </span>
+                  )}
                 </td>
 
                 {/* Giá tiền */}
