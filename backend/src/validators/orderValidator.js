@@ -75,8 +75,46 @@ const validateRemoveItem = [
     .withMessage('ID món không hợp lệ'),
 ];
 
+// ---------------------------------------------------------------
+// Validate cập nhật số lượng món trong đơn hàng
+// PUT /orders/:id/items/:itemId
+// ---------------------------------------------------------------
+const validateUpdateItem = [
+  param('id')
+    .isMongoId()
+    .withMessage('ID đơn hàng không hợp lệ'),
+
+  param('itemId')
+    .isMongoId()
+    .withMessage('ID món không hợp lệ'),
+
+  body('quantity')
+    .notEmpty()
+    .withMessage('Số lượng là bắt buộc')
+    .isInt({ min: 1 })
+    .withMessage('Số lượng phải là số nguyên ít nhất là 1'),
+];
+
+// ---------------------------------------------------------------
+// Validate cập nhật trạng thái đơn hàng
+// PATCH /orders/:id/status
+// ---------------------------------------------------------------
+const validateUpdateStatus = [
+  param('id')
+    .isMongoId()
+    .withMessage('ID đơn hàng không hợp lệ'),
+
+  body('status')
+    .notEmpty()
+    .withMessage('Trạng thái là bắt buộc')
+    .isIn(['pending', 'serving', 'done', 'cancelled'])
+    .withMessage('Trạng thái phải là: pending, serving, done hoặc cancelled'),
+];
+
 module.exports = {
   validateCreateOrder,
   validateAddItem,
   validateRemoveItem,
+  validateUpdateItem,
+  validateUpdateStatus,
 };

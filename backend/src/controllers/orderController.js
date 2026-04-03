@@ -126,10 +126,56 @@ const removeItemFromOrder = async (req, res, next) => {
   }
 };
 
+// ---------------------------------------------------------------
+// PUT /orders/:id/items/:itemId
+// Cập nhật số lượng món trong đơn hàng
+// Body: { quantity }
+// ---------------------------------------------------------------
+const updateItemInOrder = async (req, res, next) => {
+  try {
+    const { id, itemId } = req.params;
+    const { quantity } = req.body;
+
+    const order = await orderService.updateItemInOrder(id, itemId, quantity);
+
+    return res.status(200).json({
+      status: true,
+      message: 'Cập nhật số lượng món thành công',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ---------------------------------------------------------------
+// PATCH /orders/:id/status
+// Cập nhật trạng thái đơn hàng
+// Body: { status: 'pending'|'serving'|'done'|'cancelled' }
+// ---------------------------------------------------------------
+const updateOrderStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const order = await orderService.updateOrderStatus(id, status);
+
+    return res.status(200).json({
+      status: true,
+      message: `Cập nhật trạng thái đơn hàng thành công: ${status}`,
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
   getOrderById,
   addItemToOrder,
   removeItemFromOrder,
+  updateItemInOrder,
+  updateOrderStatus,
 };

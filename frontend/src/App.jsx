@@ -6,6 +6,7 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import TablesPage from './pages/TablesPage';
 import MenuPage from './pages/MenuPage';
+import OrdersPage from './pages/OrdersPage';
 import BillPanel from './components/modals/BillPanel';
 import AddTableModal from './components/modals/AddTableModal';
 
@@ -19,14 +20,6 @@ const DashboardPage = () => (
   </div>
 );
 
-const OrdersPage = () => (
-  <div className="flex-grow flex items-center justify-center text-stone-500">
-    <div className="text-center">
-      <h2 className="text-2xl font-semibold mb-2">Đơn Hàng Mới</h2>
-      <p>Đang phát triển...</p>
-    </div>
-  </div>
-);
 
 const ReportsPage = () => (
   <div className="flex-grow flex items-center justify-center text-stone-500">

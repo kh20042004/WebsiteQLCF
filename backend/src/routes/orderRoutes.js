@@ -16,6 +16,8 @@ const {
   validateCreateOrder,
   validateAddItem,
   validateRemoveItem,
+  validateUpdateItem,
+  validateUpdateStatus,
 } = require('../validators/orderValidator');
 
 // Import middleware validate
@@ -68,6 +70,30 @@ router.delete(
   validateRemoveItem,
   handleValidation,
   orderController.removeItemFromOrder
+);
+
+// ---------------------------------------------------------------
+// PUT /orders/:id/items/:itemId
+// Cập nhật số lượng món trong đơn hàng
+// Body: { quantity }
+// ---------------------------------------------------------------
+router.put(
+  '/:id/items/:itemId',
+  validateUpdateItem,
+  handleValidation,
+  orderController.updateItemInOrder
+);
+
+// ---------------------------------------------------------------
+// PATCH /orders/:id/status
+// Cập nhật trạng thái đơn hàng
+// Body: { status: 'pending'|'serving'|'done'|'cancelled' }
+// ---------------------------------------------------------------
+router.patch(
+  '/:id/status',
+  validateUpdateStatus,
+  handleValidation,
+  orderController.updateOrderStatus
 );
 
 module.exports = router;

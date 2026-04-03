@@ -200,10 +200,111 @@ const removeItemFromOrder = async (orderId, orderItemId, quantityToRemove) => {
   return await Order.findById(orderId);
 };
 
+// ---------------------------------------------------------------
+// 6. Cập nhật số lượng món trong đơn hàng
+//    Input : orderId, orderItemId, quantity (mới)
+//    Output: order đã cập nhật
+// ---------------------------------------------------------------
+const updateItemInOrder = async (orderId, orderItemId, quantity) => {
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    const error = new Error('Không tìm thấy đơn hàng');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Kiểm tra đơn hàng còn có thể sửa không
+  if (order.status === 'done' || order.status === 'cancelled') {
+    const error = new Error(
+      `Không thể sửa món trong đơn hàng có trạng thái "${order.status}"`
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Tìm index món cần cập nhật theo _id subdocument (nhất quán với removeItemFromOrder)
+  const itemIndex = order.items.findIndex(
+    (i) => i._id.toString() === orderItemId.toString()
+  );
+
+  if (itemIndex === -1) {
+    const error = new Error('Không tìm thấy món trong đơn hàng');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Ép kiểu quantity về số nguyên để tránh lỗi string từ request
+  const newQuantity = Number(quantity);
+  if (!newQuantity || newQuantity < 1) {
+    const error = new Error('Số lượng phải là số nguyên ít nhất là 1');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Cập nhật số lượng
+  order.items[itemIndex].quantity = newQuantity;
+
+  // Tính lại tổng tiền
+  order.totalPrice = recalculateTotal(order.items);
+
+  await order.save();
+
+  return await Order.findById(orderId);
+};
+
+// ---------------------------------------------------------------
+// 7. Cập nhật trạng thái đơn hàng
+//    Input : orderId, status mới
+//    Output: order đã cập nhật
+// ---------------------------------------------------------------
+const updateOrderStatus = async (orderId, newStatus) => {
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    const error = new Error('Không tìm thấy đơn hàng');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Kiểm tra luồng chuyển trạng thái hợp lệ
+  const validTransitions = {
+    pending: ['serving', 'cancelled'],
+    serving: ['done', 'cancelled'],
+    done: [],       // không thể chuyển nữa
+    cancelled: [],  // không thể chuyển nữa
+  };
+
+  const allowed = validTransitions[order.status];
+  if (!allowed.includes(newStatus)) {
+    const error = new Error(
+      `Không thể chuyển trạng thái từ "${order.status}" sang "${newStatus}"`
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  order.status = newStatus;
+
+  // Nếu đơn hoàn thành hoặc hủy -> giải phóng bàn
+  if (newStatus === 'done' || newStatus === 'cancelled') {
+    await Table.findByIdAndUpdate(order.table, {
+      status: 'available',
+      currentOrderId: null,
+    });
+  }
+
+  await order.save();
+
+  return await Order.findById(orderId);
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
   getOrderById,
   addItemToOrder,
   removeItemFromOrder,
+  updateItemInOrder,
+  updateOrderStatus,
 };
