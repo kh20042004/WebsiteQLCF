@@ -4,7 +4,7 @@ let slugify = require('slugify');
 module.exports = {
     // Lấy tất cả món ăn
     GetAllItems: async function (search = '', category = '', status = '') {
-        let queryObj = { isDeleted: false };
+        let queryObj = { isDeleted: { $ne: true } };
         if (search) {
             queryObj.name = { $regex: search, $options: 'i' };
         }
@@ -16,27 +16,29 @@ module.exports = {
         }
         return await Item.find(queryObj).populate({
             path: 'category',
-            match: { isDeleted: false }, // Chỉ lấy danh mục chưa bị xóa
+            match: { isDeleted: { $ne: true } }, // Chỉ lấy danh mục chưa bị xóa
             select: 'name'
         });
     },
 
     // Lấy chi tiết 1 món ăn theo ID
     GetItemById: async function (id) {
-        return await Item.findOne({ _id: id, isDeleted: false }).populate({
+        return await Item.findOne({ _id: id, isDeleted: { $ne: true } }).populate({
             path: 'category',
-            match: { isDeleted: false }, // Chỉ lấy danh mục chưa bị xóa
+            match: { isDeleted: { $ne: true } },
             select: 'name'
         });
     },
 
     // Tạo mới món ăn
     CreateItem: async function (data, file = null) {
-        // Bước 1: Tìm trong Database xem có bản ghi nào trùng name không
-        let existingItem = await Item.findOne({ name: data.name });
+        const nameTrimmed = data.name.trim();
+        // Bước 1: Tìm không phân biệt hoa thường
+        let existingItem = await Item.findOne({ 
+            name: { $regex: new RegExp(`^${nameTrimmed}$`, 'i') } 
+        });
 
         if (existingItem) {
-            // Nếu tìm thấy bản ghi có isDeleted: true: Cập nhật thành false (Khôi phục)
             if (existingItem.isDeleted) {
                 let updateData = { ...data, isDeleted: false };
                 if (file) {
@@ -52,12 +54,10 @@ module.exports = {
                     message: "Khôi phục thành công món ăn cũ" 
                 };
             } else {
-                // Nếu tìm thấy bản ghi có isDeleted: false: Trả về lỗi
-                throw new Error("Tên món ăn này đang tồn tại và đang sử dụng");
+                throw new Error("Tên món ăn thức uống này đang tồn tại và đang sử dụng");
             }
         }
 
-        // Nếu không tìm thấy: Tiến hành create() mới hoàn toàn
         let itemData = { ...data };
         if (file) {
             itemData.image = `/uploads/${file.filename}`;

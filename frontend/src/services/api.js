@@ -31,7 +31,7 @@ api.interceptors.response.use(
   (error) => {
     // Handle errors centrally
     const message =
-      error.response?.data?.message ||
+      (typeof error.response?.data === 'string' ? error.response.data : error.response?.data?.message) ||
       error.message ||
       'Đã xảy ra lỗi không xác định';
 
