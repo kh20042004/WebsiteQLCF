@@ -63,6 +63,7 @@ const MenuPage = () => {
    * Xử lý Lưu (Thêm mới hoặc Cập nhật)
    */
   const handleSaveItem = async (formData) => {
+    const itemName = formData.get('name');
     try {
       // formData là FormData object → dùng .get() thay vì .name trực tiếp
       const itemName = formData.get('name');

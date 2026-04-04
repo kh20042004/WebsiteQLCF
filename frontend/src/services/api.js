@@ -81,7 +81,7 @@ api.interceptors.response.use(
 
     // Lấy message lỗi từ response
     const message =
-      error.response?.data?.message ||
+      (typeof error.response?.data === 'string' ? error.response.data : error.response?.data?.message) ||
       error.message ||
       'Đã xảy ra lỗi không xác định';
 

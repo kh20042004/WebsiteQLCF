@@ -1,209 +1,97 @@
-const Item = require('../models/Item');
-const Category = require('../models/Category');
-const cloudinary = require('../config/cloudinary');
-
-/**
- * Hàm helper: Upload buffer ảnh lên Cloudinary
- * multer memoryStorage lưu file trong req.file.buffer
- * Cần dùng upload_stream để push buffer lên Cloudinary
- */
-const uploadImageToCloudinary = (buffer) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: 'coffee-shop/products', // Lưu vào thư mục này trên Cloudinary
-        quality: 'auto',               // Tự động tối ưu chất lượng ảnh
-        fetch_format: 'auto',          // Tự chọn định dạng tốt nhất (WebP...)
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      }
-    );
-    stream.end(buffer); // Đẩy buffer vào stream để upload
-  });
-};
-
-/**
- * Lấy danh sách sản phẩm (Món)
- * - Hỗ trợ lọc theo tên (search)
- * - Hỗ trợ lọc theo danh mục (category)
- * - Sử dụng populate() để lấy tên danh mục
- */
-const getAllItems = async (req, res, next) => {
-  try {
-    const { search, category } = req.query;
-    let queryObj = {};
-
-    // Tìm kiếm theo tên (không phân biệt hoa thường)
-    if (search) {
-      queryObj.name = { $regex: search, $options: 'i' };
-    }
-
-    // Lọc theo danh mục
-    if (category) {
-      queryObj.category = category;
-    }
-
-    // Thực hiện truy vấn và populate() thông tin danh mục
-    const items = await Item.find(queryObj).populate({
-      path: 'category',
-      select: 'name description',
-    });
-
-    res.status(200).json({
-      status: true,
-      results: items.length,
-      data: items,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Lấy chi tiết chi tiết 1 sản phẩm
- */
-const getItemById = async (req, res, next) => {
-  try {
-    const item = await Item.findById(req.params.id).populate('category');
-
-    if (!item) {
-      return res.status(404).json({
-        status: false,
-        message: 'Không tìm thấy sản phẩm với ID này',
-      });
-    }
-
-    res.status(200).json({
-      status: true,
-      data: item,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Tạo mới một món ăn/uống
- */
-const createItem = async (req, res, next) => {
-  try {
-    // Kiểm tra xem category_id hợp lệ không
-    const categoryExists = await Category.findById(req.body.category);
-    if (!categoryExists) {
-      return res.status(400).json({
-        status: false,
-        message: 'Danh mục không tồn tại. Vui lòng chọn danh mục hợp lệ.',
-      });
-    }
-
-    const itemData = { ...req.body };
-
-    // Nếu có file ảnh đính kèm (từ multer memoryStorage)
-    if (req.file && req.file.buffer) {
-      // Upload buffer lên Cloudinary, lấy URL an toàn (https)
-      const cloudResult = await uploadImageToCloudinary(req.file.buffer);
-      itemData.image = cloudResult.secure_url;
-    } else {
-      // Không có file mới → xóa trường image rỗng để tránh lưu {} vào DB
-      if (!itemData.image || typeof itemData.image === 'object') {
-        delete itemData.image;
-      }
-    }
-
-    // Tạo sản phẩm mới
-    const newItem = await Item.create(itemData);
-
-    res.status(201).json({
-      status: true,
-      message: 'Tạo sản phẩm thành công',
-      data: newItem,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Cập nhật thông tin món
- */
-const updateItem = async (req, res, next) => {
-  try {
-    // Nếu có cập nhật category, kiểm tra xem nó có tồn tại không
-    if (req.body.category) {
-      const categoryExists = await Category.findById(req.body.category);
-      if (!categoryExists) {
-        return res.status(400).json({
-          status: false,
-          message: 'Danh mục không hợp lệ.',
-        });
-      }
-    }
-
-    const updateData = { ...req.body };
-
-    // Nếu có file ảnh mới đính kèm (từ multer memoryStorage)
-    if (req.file && req.file.buffer) {
-      // Upload buffer lên Cloudinary, lấy URL an toàn (https)
-      const cloudResult = await uploadImageToCloudinary(req.file.buffer);
-      updateData.image = cloudResult.secure_url; // URL Cloudinary
-    } else {
-      // Không có file mới → giữ ảnh cũ, xóa giá trị rỗng tránh ghi đè vào DB
-      if (!updateData.image || typeof updateData.image === 'object') {
-        delete updateData.image;
-      }
-    }
-
-    const item = await Item.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!item) {
-      return res.status(404).json({
-        status: false,
-        message: 'Không tìm thấy sản phẩm để cập nhật',
-      });
-    }
-
-    res.status(200).json({
-      status: true,
-      message: 'Cập nhật sản phẩm thành công',
-      data: item,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Xóa một món
- */
-const deleteItem = async (req, res, next) => {
-  try {
-    const item = await Item.findByIdAndDelete(req.params.id);
-
-    if (!item) {
-      return res.status(404).json({
-        status: false,
-        message: 'Không tìm thấy sản phẩm để xóa',
-      });
-    }
-
-    res.status(200).json({
-      status: true,
-      message: 'Xóa sản phẩm thành công',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+let Item = require('../models/Item');
+let slugify = require('slugify');
 
 module.exports = {
-  getAllItems,
-  getItemById,
-  createItem,
-  updateItem,
-  deleteItem,
+    // Lấy tất cả món ăn
+    GetAllItems: async function (search = '', category = '', status = '') {
+        let queryObj = { isDeleted: { $ne: true } };
+        if (search) {
+            queryObj.name = { $regex: search, $options: 'i' };
+        }
+        if (category) {
+            queryObj.category = category;
+        }
+        if (status) {
+            queryObj.status = status;
+        }
+        return await Item.find(queryObj).populate({
+            path: 'category',
+            match: { isDeleted: { $ne: true } }, // Chỉ lấy danh mục chưa bị xóa
+            select: 'name'
+        });
+    },
+
+    // Lấy chi tiết 1 món ăn theo ID
+    GetItemById: async function (id) {
+        return await Item.findOne({ _id: id, isDeleted: { $ne: true } }).populate({
+            path: 'category',
+            match: { isDeleted: { $ne: true } },
+            select: 'name'
+        });
+    },
+
+    // Tạo mới món ăn
+    CreateItem: async function (data, file = null) {
+        const nameTrimmed = data.name.trim();
+        // Bước 1: Tìm không phân biệt hoa thường
+        let existingItem = await Item.findOne({ 
+            name: { $regex: new RegExp(`^${nameTrimmed}$`, 'i') } 
+        });
+
+        if (existingItem) {
+            if (existingItem.isDeleted) {
+                let updateData = { ...data, isDeleted: false };
+                if (file) {
+                    updateData.image = `/uploads/${file.filename}`;
+                }
+                updateData.slug = slugify(data.name, { lower: true, strict: true });
+
+                Object.assign(existingItem, updateData);
+                await existingItem.save();
+                return { 
+                    restored: true, 
+                    data: existingItem, 
+                    message: "Khôi phục thành công món ăn cũ" 
+                };
+            } else {
+                throw new Error("Tên món ăn thức uống này đang tồn tại và đang sử dụng");
+            }
+        }
+
+        let itemData = { ...data };
+        if (file) {
+            itemData.image = `/uploads/${file.filename}`;
+        }
+        itemData.slug = slugify(itemData.name, { lower: true, strict: true });
+        
+        let newItem = new Item(itemData);
+        await newItem.save();
+        return { restored: false, data: newItem };
+    },
+
+    // Cập nhật món ăn
+    UpdateItem: async function (id, data, file = null) {
+        let itemData = { ...data };
+        if (file) {
+            itemData.image = `/uploads/${file.filename}`;
+        }
+        if (itemData.name) {
+            itemData.slug = slugify(itemData.name, { lower: true, strict: true });
+        }
+        
+        return await Item.findOneAndUpdate(
+            { _id: id, isDeleted: false },
+            itemData,
+            { new: true, runValidators: true }
+        );
+    },
+
+    // Xóa món ăn (Soft delete)
+    DeleteItem: async function (id) {
+        return await Item.findOneAndUpdate(
+            { _id: id, isDeleted: false },
+            { isDeleted: true },
+            { new: true }
+        );
+    }
 };

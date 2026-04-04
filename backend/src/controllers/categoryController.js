@@ -1,136 +1,72 @@
-const Category = require('../models/Category');
-const Item = require('../models/Item');
-
-/**
- * Lấy danh sách danh mục
- */
-const getAllCategories = async (req, res, next) => {
-  try {
-    const { search } = req.query;
-    let queryObj = {};
-
-    // Tìm kiếm theo tên (regex không phân biệt hoa thường)
-    if (search) {
-      queryObj.name = { $regex: search, $options: 'i' };
-    }
-
-    const categories = await Category.find(queryObj);
-
-    res.status(200).json({
-      status: true,
-      results: categories.length,
-      data: categories,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Lấy chi tiết chi tiết 1 danh mục
- */
-const getCategoryById = async (req, res, next) => {
-  try {
-    const category = await Category.findById(req.params.id);
-
-    if (!category) {
-      return res.status(404).json({
-        status: false,
-        message: 'Không tìm thấy danh mục',
-      });
-    }
-
-    res.status(200).json({
-      status: true,
-      data: category,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Tạo mới danh mục
- */
-const createCategory = async (req, res, next) => {
-  try {
-    const newCategory = await Category.create(req.body);
-
-    res.status(201).json({
-      status: true,
-      message: 'Tạo danh mục thành công',
-      data: newCategory,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Cập nhật danh mục
- */
-const updateCategory = async (req, res, next) => {
-  try {
-    const category = await Category.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!category) {
-      return res.status(404).json({
-        status: false,
-        message: 'Không tìm thấy danh mục để cập nhật',
-      });
-    }
-
-    res.status(200).json({
-      status: true,
-      message: 'Cập nhật danh mục thành công',
-      data: category,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Xóa danh mục
- */
-const deleteCategory = async (req, res, next) => {
-  try {
-    // 1. Kiểm tra xem có sản phẩm nào đang thuộc danh mục này không
-    const itemCount = await Item.countDocuments({ category: req.params.id });
-    
-    if (itemCount > 0) {
-      return res.status(400).json({
-        status: false,
-        message: `Không thể xóa danh mục này vì vẫn còn ${itemCount} sản phẩm bên trong. Hãy xóa hoặc chuyển các sản phẩm đó sang danh mục khác trước.`
-      });
-    }
-
-    // 2. Thực hiện xóa danh mục
-    const category = await Category.findByIdAndDelete(req.params.id);
-
-    if (!category) {
-      return res.status(404).json({
-        status: false,
-        message: 'Không tìm thấy danh mục để xóa',
-      });
-    }
-
-    res.status(200).json({
-      status: true,
-      message: 'Xóa danh mục thành công',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+let Category = require('../models/Category');
+let Item = require('../models/Item');
+let mongoose = require('mongoose');
 
 module.exports = {
-  getAllCategories,
-  getCategoryById,
-  createCategory,
-  updateCategory,
-  deleteCategory,
+    // Lấy tất cả danh mục
+    GetAllCategories: async function (search = '') {
+        let queryObj = { isDeleted: { $ne: true } }; // Lấy tất cả trừ những cái đã xóa (isDeleted: true)
+        if (search) {
+            queryObj.name = { $regex: search, $options: 'i' };
+        }
+        return await Category.find(queryObj);
+    },
+
+    // Lấy chi tiết 1 danh mục theo ID
+    GetCategoryById: async function (id) {
+        return await Category.findOne({ _id: id, isDeleted: { $ne: true } });
+    },
+
+    // Tạo mới danh mục
+    CreateCategory: async function (data) {
+        const nameTrimmed = data.name.trim();
+        
+        let existingCategory = await Category.findOne({ 
+            name: { $regex: new RegExp(`^${nameTrimmed}$`, 'i') } 
+        });
+
+        if (existingCategory) {
+            if (existingCategory.isDeleted) {
+                existingCategory.isDeleted = false;
+                if (data.description) existingCategory.description = data.description;
+                await existingCategory.save();
+                return { 
+                    restored: true, 
+                    data: existingCategory, 
+                    message: "Khôi phục thành công danh mục cũ" 
+                };
+            } else {
+                throw new Error("Tên danh mục món ăn thức uống này đang tồn tại và đang sử dụng");
+            }
+        }
+
+        let newCategory = new Category(data);
+        await newCategory.save();
+        return { restored: false, data: newCategory };
+    },
+
+    // Cập nhật danh mục
+    UpdateCategory: async function (id, data) {
+        return await Category.findOneAndUpdate(
+            { _id: id, isDeleted: false },
+            data,
+            { new: true, runValidators: true }
+        );
+    },
+
+    // Xóa danh mục
+    DeleteCategory: async function (id) {
+       
+        const categoryId = new mongoose.Types.ObjectId(id);
+        await Item.updateMany({ category: categoryId }, { $unset: { category: 1 } });
+        
+        const deletedCategory = await Category.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+
+ 
+    return {
+        success: true,
+        data: deletedCategory,
+        message: "Đã xóa danh mục món ăn thức uống thành công"
+    }
+}
 };

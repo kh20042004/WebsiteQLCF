@@ -5,8 +5,10 @@ import categoryService from '../../services/categoryService';
 const CategoryModal = ({ isOpen, onClose, onCategoryUpdate }) => {
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -36,8 +38,12 @@ const CategoryModal = ({ isOpen, onClose, onCategoryUpdate }) => {
     setIsLoading(true);
     setError('');
     try {
-      await categoryService.createCategory({ name: newCategoryName });
+      await categoryService.createCategory({ 
+        name: newCategoryName, 
+        description: newCategoryDescription 
+      });
       setNewCategoryName('');
+      setNewCategoryDescription('');
       setSuccess('Đã thêm danh mục mới!');
       fetchCategories();
       if (onCategoryUpdate) onCategoryUpdate();
@@ -70,6 +76,7 @@ const CategoryModal = ({ isOpen, onClose, onCategoryUpdate }) => {
   const handleStartEdit = (category) => {
     setEditingCategory(category._id);
     setEditName(category.name);
+    setEditDescription(category.description || '');
   };
 
   const handleSaveEdit = async (id) => {
@@ -78,7 +85,10 @@ const CategoryModal = ({ isOpen, onClose, onCategoryUpdate }) => {
     setIsLoading(true);
     setError('');
     try {
-      await categoryService.updateCategory(id, { name: editName });
+      await categoryService.updateCategory(id, { 
+        name: editName, 
+        description: editDescription 
+      });
       setEditingCategory(null);
       setSuccess('Đã cập nhật danh mục!');
       fetchCategories();
@@ -132,6 +142,16 @@ const CategoryModal = ({ isOpen, onClose, onCategoryUpdate }) => {
                   className="w-full px-4 py-3.5 bg-white border border-stone-200 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all font-bold text-stone-800 placeholder:text-stone-300 shadow-sm"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-black text-stone-700 mb-2 uppercase tracking-wider">Mô tả (Không bắt buộc)</label>
+                <textarea
+                  value={newCategoryDescription}
+                  onChange={(e) => setNewCategoryDescription(e.target.value)}
+                  placeholder="Nhập mô tả cho danh mục..."
+                  className="w-full px-4 py-3.5 bg-white border border-stone-200 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all font-medium text-stone-800 placeholder:text-stone-300 shadow-sm resize-none h-24"
+                />
+              </div>
               <button
                 type="submit"
                 disabled={isLoading || !newCategoryName.trim()}
@@ -168,14 +188,15 @@ const CategoryModal = ({ isOpen, onClose, onCategoryUpdate }) => {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-100">
-                    <th className="px-6 py-4 text-[10px] font-black text-stone-400 uppercase tracking-widest">Tên danh mục</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-stone-400 uppercase tracking-widest w-1/3">Tên danh mục</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-stone-400 uppercase tracking-widest">Mô tả</th>
                     <th className="px-6 py-4 text-[10px] font-black text-stone-400 uppercase tracking-widest text-right">Hành động</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
                   {categories.length === 0 ? (
                     <tr>
-                      <td colSpan="2" className="px-6 py-12 text-center">
+                      <td colSpan="3" className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center text-stone-300">
                           <LayoutGrid size={48} className="mb-2 opacity-20" />
                           <p className="text-sm font-bold uppercase tracking-widest">Chưa có danh mục nào</p>
@@ -185,7 +206,7 @@ const CategoryModal = ({ isOpen, onClose, onCategoryUpdate }) => {
                   ) : (
                     categories.map((cat) => (
                       <tr key={cat._id} className="group hover:bg-stone-50 transition-colors">
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 align-top">
                           {editingCategory === cat._id ? (
                             <input
                               type="text"
@@ -204,7 +225,21 @@ const CategoryModal = ({ isOpen, onClose, onCategoryUpdate }) => {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 align-top">
+                          {editingCategory === cat._id ? (
+                            <textarea
+                              value={editDescription}
+                              onChange={(e) => setEditDescription(e.target.value)}
+                              className="w-full px-3 py-2 border-2 border-amber-500 rounded-lg outline-none font-medium text-stone-800 resize-none h-20"
+                              placeholder="Nhập mô tả..."
+                            />
+                          ) : (
+                            <p className="text-stone-500 text-sm line-clamp-2 italic font-medium">
+                              {cat.description || 'Chưa có mô tả...'}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right align-top">
                           <div className="flex items-center justify-end gap-2">
                             {editingCategory === cat._id ? (
                               <>

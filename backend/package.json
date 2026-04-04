@@ -23,7 +23,8 @@
     "express-validator": "^7.0.0",
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.0.0",
-    "multer": "^2.1.1"
+    "multer": "^2.1.1",
+    "slugify": "^1.6.9"
   },
   "devDependencies": {
     "nodemon": "^2.0.20"

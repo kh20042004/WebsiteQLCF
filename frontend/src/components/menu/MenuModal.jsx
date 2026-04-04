@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Package, DollarSign, Image as ImageIcon, Tag, CheckCircle, AlertCircle } from 'lucide-react';
 import categoryService from '../../services/categoryService';
+import { BASE_URL } from '../../utils/constants';
 
 const MenuModal = ({ isOpen, onClose, onSave, editingItem }) => {
   const [categories, setCategories] = useState([]);
@@ -33,7 +34,7 @@ const MenuModal = ({ isOpen, onClose, onSave, editingItem }) => {
           status: editingItem.status || 'Available',
           description: editingItem.description || ''
         });
-        setPreviewUrl(editingItem.image || '');
+        setPreviewUrl(editingItem.image ? (editingItem.image.startsWith('http') ? editingItem.image : `${BASE_URL}${editingItem.image}`) : '');
       } else {
         setFormData({
           name: '',

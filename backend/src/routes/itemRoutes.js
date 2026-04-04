@@ -1,70 +1,94 @@
+var express = require('express');
+var router = express.Router();
+let itemController = require('../controllers/itemController');
+let { uploadImage } = require('../utils/uploadHandler');
+let { ItemValidator, validationResult } = require('../utils/validatorHandler');
+
 /**
- * Routes: itemRoutes.js (đã phân quyền)
- *
- * Phân quyền thực đơn (Item):
- * - GET  /items        → Tất cả nhân viên (xem menu để gọi món)
- * - GET  /items/:id    → Tất cả nhân viên
- * - POST /items        → Chỉ ADMIN (thêm món mới vào menu)
- * - PUT  /items/:id    → Chỉ ADMIN (sửa thông tin món, giá, ảnh)
- * - DELETE /items/:id  → Chỉ ADMIN (xóa món khỏi menu)
+ * Định nghĩa RESTful routes cho menu items (Sản phẩm)
  */
 
-const express = require('express');
-const router = express.Router();
-const itemController = require('../controllers/itemController');
+// Lấy tất cả món ăn
+router.get('/', async (req, res) => {
+    try {
+        const { search, category, status } = req.query;
+        const items = await itemController.GetAllItems(search, category, status);
+        res.status(200).json({
+            status: true,
+            results: items.length,
+            data: items,
+        });
+    } catch (error) {
+        res.status(404).send(error.message);
+    }
+});
 
-// Import middleware xác thực và phân quyền
-const authenticate = require('../middlewares/authenticate');
-const { requireAdmin, requireStaff } = require('../middlewares/authenticate');
+// Lấy chi tiết 1 món ăn
+router.get('/:id', async (req, res) => {
+    try {
+        const item = await itemController.GetItemById(req.params.id);
+        if (item) {
+            res.status(200).json({ status: true, data: item });
+        } else {
+            res.status(404).json({ status: false, message: 'Không tìm thấy món ăn' });
+        }
+    } catch (error) {
+        res.status(404).send(error.message);
+    }
+});
 
-// Import uploadSingle từ multer config (memoryStorage → stream lên Cloudinary)
-// uploadSingle: nhận 1 file ảnh từ field "image" (multipart/form-data)
-const { uploadSingle } = require('../config/multer');
+// Tạo mới món ăn
+router.post('/', uploadImage.single('image'), ItemValidator, validationResult, async (req, res) => {
+    try {
+        const result = await itemController.CreateItem(req.body, req.file);
+        if (result.restored) {
+            res.status(200).json({
+                status: true,
+                message: result.message,
+                data: result.data,
+            });
+        } else {
+            res.status(201).json({
+                status: true,
+                message: 'Tạo món ăn thành công',
+                data: result.data,
+            });
+        }
+    } catch (error) {
+        res.status(400).send(error.message); // Sử dụng 400 cho lỗi validation/duplicate
+    }
+});
 
-// ---- XEM THỰC ĐƠN: Tất cả nhân viên ----
+// Cập nhật món ăn
+router.put('/:id', uploadImage.single('image'), ItemValidator, validationResult, async (req, res) => {
+    try {
+        const item = await itemController.UpdateItem(req.params.id, req.body, req.file);
+        if (item) {
+            res.status(200).json({
+                status: true,
+                message: 'Cập nhật món ăn thành công',
+                data: item,
+            });
+        } else {
+            res.status(404).json({ status: false, message: 'Không tìm thấy món ăn để cập nhật' });
+        }
+    } catch (error) {
+        res.status(404).send(error.message);
+    }
+});
 
-// GET /api/items — Xem danh sách tất cả món
-router.get(
-  '/',
-  authenticate,   // Phải đăng nhập
-  requireStaff,   // Staff hoặc admin đều xem được
-  itemController.getAllItems
-);
-
-// GET /api/items/:id — Xem chi tiết 1 món
-router.get(
-  '/:id',
-  authenticate,
-  requireStaff,
-  itemController.getItemById
-);
-
-// ---- QUẢN LÝ THỰC ĐƠN: Chỉ ADMIN ----
-
-// POST /api/items — Thêm món mới (kèm upload ảnh)
-router.post(
-  '/',
-  authenticate,    // Bước 1: Phải đăng nhập
-  requireAdmin,    // Bước 2: Phải là admin
-  uploadSingle,    // Bước 3: Multer nhận ảnh sản phẩm (field "image")
-  itemController.createItem
-);
-
-// PUT /api/items/:id — Cập nhật thông tin món (kèm upload ảnh mới nếu có)
-router.put(
-  '/:id',
-  authenticate,
-  requireAdmin,
-  uploadSingle,    // Cho phép thay ảnh khi cập nhật món
-  itemController.updateItem
-);
-
-// DELETE /api/items/:id — Xóa món khỏi menu
-router.delete(
-  '/:id',
-  authenticate,
-  requireAdmin,
-  itemController.deleteItem
-);
+// Xóa món ăn (Soft delete)
+router.delete('/:id', async (req, res) => {
+    try {
+        const item = await itemController.DeleteItem(req.params.id);
+        if (item) {
+            res.status(200).json({ status: true, message: 'Xóa món ăn thành công' });
+        } else {
+            res.status(404).json({ status: false, message: 'Không tìm thấy món ăn để xóa' });
+        }
+    } catch (error) {
+        res.status(404).send(error.message);
+    }
+});
 
 module.exports = router;
