@@ -1,20 +1,24 @@
-import React, { useState } from 'react';
-import { Icon } from '@iconify/react';
-import StatusBadge from './StatusBadge';
-import useModal from '../../hooks/useModal';
-
 /**
- * TableCard Component - Reusable card cho hiển thị bàn
+ * TableCard Component - Reusable card cho hiển thị bàn (ĐÃ CÓ PHÂN QUYỀN)
  * Hỗ trợ 3 trạng thái: available, occupied, reserved
  *
  * @param {Object} table - Table object từ API
  * @param {Function} onCreateOrder - Callback khi tạo đơn hàng (available)
  * @param {Function} onCancelReservation - Callback khi hủy đặt bàn (reserved)
  * @param {Function} onSeatGuest - Callback khi tiếp khách (reserved)
- * @param {Function} onDeleteTable - Callback khi xóa bàn
+ * @param {Function} onDeleteTable - Callback khi xóa bàn (CHỈ ADMIN)
  * @param {Function} onEditTable - Callback khi chỉnh sửa bàn
  * @param {Number} animationDelay - Delay cho animation (optional)
+ * 
+ * 📌 PHÂN QUYỀN:
+ * - Nút "Xóa bàn" chỉ hiển thị cho Admin
+ * - Staff không thấy nút xóa để tránh xóa nhầm
  */
+import React, { useState } from 'react';
+import { Icon } from '@iconify/react';
+import StatusBadge from './StatusBadge';
+import useModal from '../../hooks/useModal';
+import { isAdmin } from '../../utils/auth'; // Import helper function
 const TableCard = ({
   table,
   onCreateOrder,
@@ -200,23 +204,27 @@ const TableCard = ({
                   <Icon icon="solar:pen-outline" className="text-stone-500" aria-hidden="true" />
                   Quản lý bàn
                 </button>
-                <button
-                  onClick={handleDeleteTable}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleDeleteTable();
-                    } else if (e.key === 'Escape') {
-                      setIsDropdownOpen(false);
-                    }
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors focus-visible-enhanced"
-                  role="menuitem"
-                  aria-label={`Xóa bàn ${table.name}`}
-                >
-                  <Icon icon="solar:trash-bin-trash-outline" className="text-red-500" aria-hidden="true" />
-                  Xóa bàn
-                </button>
+                
+                {/* Nút XÓA BÀN - CHỈ ADMIN mới thấy 🔒 */}
+                {isAdmin() && (
+                  <button
+                    onClick={handleDeleteTable}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleDeleteTable();
+                      } else if (e.key === 'Escape') {
+                        setIsDropdownOpen(false);
+                      }
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors focus-visible-enhanced"
+                    role="menuitem"
+                    aria-label={`Xóa bàn ${table.name}`}
+                  >
+                    <Icon icon="solar:trash-bin-trash-outline" className="text-red-500" aria-hidden="true" />
+                    Xóa bàn
+                  </button>
+                )}
 
               </div>
             </>

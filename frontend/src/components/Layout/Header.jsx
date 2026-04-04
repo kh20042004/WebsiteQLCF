@@ -1,21 +1,24 @@
 /**
- * Header Component - Thanh điều hướng cố định phía trên
+ * Header Component - Thanh điều hướng cố định phía trên (ĐÃ CÓ PHÂN QUYỀN)
  *
  * Chức năng:
  * - Logo + tên thương hiệu
- * - Nav links điều hướng giữa các trang
+ * - Nav links điều hướng giữa các trang (ẨN/HIỆN theo role)
  * - Dropdown hồ sơ người dùng:
- *   + Hiển thị tên và email từ localStorage
+ *   + Hiển thị tên, email và ROLE từ localStorage
  *   + Xem Hồ Sơ (modal inline)
  *   + Đăng Xuất (xóa token + user khỏi localStorage, reload trang)
  *
- * Không import AuthContext vì file đó dùng JSX nhưng đặt đuôi .js
- * → đọc/ghi localStorage trực tiếp để tránh lỗi parse của Vite
+ * 📌 PHÂN QUYỀN:
+ * - Staff: Chỉ thấy Dashboard, Bàn, Đơn hàng
+ * - Admin: Thấy tất cả (thêm Thực đơn, Báo cáo)
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
+import { isAdmin } from '../../utils/auth'; // Import helper function
+import NotificationContainer from '../common/NotificationContainer'; // ✨ Import component thông báo
 
 const Header = () => {
   const location  = useLocation();
@@ -94,8 +97,9 @@ const Header = () => {
               </span>
             </Link>
 
-            {/* Nav links giữa (Desktop) */}
+            {/* Nav links giữa (Desktop) - Ẩn/hiện theo role */}
             <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-stone-500">
+              {/* Dashboard - TẤT CẢ user đều thấy */}
               <Link
                 to="/dashboard"
                 className={`${
@@ -104,26 +108,13 @@ const Header = () => {
                     : 'hover:text-stone-900 transition-colors duration-200'
                 }`}
               >
-                Bảng Điều Khiển / Người Dùng
+                Dashboard
                 {isActiveRoute('/dashboard') && (
                   <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
                 )}
               </Link>
 
-              <Link
-                to="/menu"
-                className={`${
-                  isActiveRoute('/menu')
-                    ? 'text-stone-900 relative group'
-                    : 'hover:text-stone-900 transition-colors duration-200'
-                }`}
-              >
-                Quản Lý Thực Đơn
-                {isActiveRoute('/menu') && (
-                  <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
-                )}
-              </Link>
-
+              {/* Bàn - TẤT CẢ user đều thấy */}
               <Link
                 to="/tables"
                 className={`${
@@ -132,12 +123,13 @@ const Header = () => {
                     : 'hover:text-stone-900 transition-colors duration-200'
                 }`}
               >
-                Tổng Quan Bàn
+                Bàn
                 {(isActiveRoute('/') || isActiveRoute('/tables')) && (
                   <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
                 )}
               </Link>
 
+              {/* Đơn hàng - TẤT CẢ user đều thấy */}
               <Link
                 to="/orders"
                 className={`${
@@ -146,35 +138,59 @@ const Header = () => {
                     : 'hover:text-stone-900 transition-colors duration-200'
                 }`}
               >
-                Đơn Hàng Mới
+                Đơn Hàng
                 {isActiveRoute('/orders') && (
                   <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
                 )}
               </Link>
 
-              <Link
-                to="/reports"
-                className={`${
-                  isActiveRoute('/reports')
-                    ? 'text-stone-900 relative group'
-                    : 'hover:text-stone-900 transition-colors duration-200'
-                }`}
-              >
-                Thanh Toán &amp; Báo Cáo
-                {isActiveRoute('/reports') && (
-                  <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
-                )}
-              </Link>
+              {/* Thực đơn - CHỈ ADMIN mới thấy 🔒 */}
+              {isAdmin() && (
+                <Link
+                  to="/menu"
+                  className={`${
+                    isActiveRoute('/menu')
+                      ? 'text-stone-900 relative group'
+                      : 'hover:text-stone-900 transition-colors duration-200'
+                  }`}
+                >
+                  Thực Đơn
+                  {isActiveRoute('/menu') && (
+                    <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
+                  )}
+                </Link>
+              )}
+
+              {/* Báo cáo - CHỈ ADMIN mới thấy 🔒 */}
+              {isAdmin() && (
+                <Link
+                  to="/reports"
+                  className={`${
+                    isActiveRoute('/reports')
+                      ? 'text-stone-900 relative group'
+                      : 'hover:text-stone-900 transition-colors duration-200'
+                  }`}
+                >
+                  Báo Cáo
+                  {isActiveRoute('/reports') && (
+                    <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
+                  )}
+                </Link>
+              )}
             </nav>
 
             {/* Vùng bên phải: Thông báo + Profile */}
             <div className="flex items-center gap-4">
 
-              {/* Nút thông báo */}
-              <button className="relative p-2 text-stone-400 hover:text-stone-900 transition-colors rounded-full hover:bg-stone-100">
-                <Icon icon="solar:bell-linear" className="text-xl" />
-                <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-rose-500 rounded-full border border-white" />
-              </button>
+              {/* 
+                🔔 HỆ THỐNG THÔNG BÁO MỚI
+                - Icon chuông với badge đỏ hiển thị số thông báo chưa đọc
+                - Click để mở dropdown danh sách thông báo
+                - Tự động cập nhật realtime (interval 30s)
+                - Hỗ trợ đánh dấu đã đọc, xóa thông báo
+                - Phân quyền: Staff và Admin đều xem được thông báo của mình
+              */}
+              <NotificationContainer />
 
               {/* ---- DROPDOWN HỒ SƠ ---- */}
               <div className="relative" ref={profileRef}>
@@ -206,6 +222,16 @@ const Header = () => {
                       <p className="text-xs text-stone-400 truncate mt-0.5">
                         {user?.email || 'Chưa đăng nhập'}
                       </p>
+                      {/* Hiển thị role với badge màu */}
+                      <div className="mt-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          user?.role === 'admin' 
+                            ? 'bg-amber-100 text-amber-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {user?.role === 'admin' ? '👑 Admin' : '👤 Staff'}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="p-1.5">

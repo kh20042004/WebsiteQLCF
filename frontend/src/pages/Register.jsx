@@ -55,10 +55,12 @@ const Register = () => {
 
     try {
       setIsLoading(true);
+      // Gửi cả confirmPassword để backend validate lại (bảo mật 2 lớp)
       await api.post('/auth/register', {
         name: formData.name.trim(),
         email: formData.email.toLowerCase(),
         password: formData.password,
+        confirmPassword: formData.confirmPassword, // ← THÊM FIELD NÀY
       });
       setSuccess('Đăng ký thành công! Đang chuyển sang trang đăng nhập...');
       setTimeout(() => navigate('/login'), 1800);

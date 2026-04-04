@@ -62,7 +62,8 @@ const reportController = {
             );
 
             res.status(200).json({
-                success: true,
+                status: true,
+                message: 'Lấy báo cáo doanh thu thành công',
                 data: {
                     date: reportDate,
                     totalRevenue,           // Tổng tiền thu được trong ngày
@@ -70,11 +71,11 @@ const reportController = {
                 }
             });
         } catch (error) {
-            console.error('Lỗi getDailyReport:', error);
+            console.error('💥 Lỗi getDailyReport:', error.message);
             res.status(500).json({
-                success: false,
+                status: false,
                 message: 'Lỗi khi lấy báo cáo doanh thu',
-                error: error.message
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     },
@@ -91,6 +92,8 @@ const reportController = {
     getTopItems: async (req, res) => {
         try {
             const { startOfDay, endOfDay } = getDateRange(req.query.date);
+
+            console.log(`📊 Top items query: startOfDay=${startOfDay}, endOfDay=${endOfDay}`);
 
             const topItems = await Order.aggregate([
                 // Bước 1: Lọc đơn đã hoàn thành trong khoảng ngày
@@ -152,16 +155,19 @@ const reportController = {
                 }
             ]);
 
+            console.log(`📊 Found ${topItems.length} top items for date ${req.query.date || 'today'}`);
+
             res.status(200).json({
-                success: true,
+                status: true,
+                message: 'Lấy top món bán chạy thành công',
                 data: topItems
             });
         } catch (error) {
-            console.error('Lỗi getTopItems:', error);
+            console.error('💥 Lỗi getTopItems:', error.message);
             res.status(500).json({
-                success: false,
+                status: false,
                 message: 'Lỗi khi lấy top món bán chạy',
-                error: error.message
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     }

@@ -28,13 +28,15 @@ const connectDB = require('./config/database');
 require('./config/cloudinary');
 
 // ---- BƯỚC 4: IMPORT ROUTES (sau khi Cloudinary sẵn sàng) ----
-const authRoutes    = require('./routes/authRoutes');
-const categoryRoutes = require('./routes/categoryRoutes');
-const itemRoutes    = require('./routes/itemRoutes');
-const orderRoutes   = require('./routes/orderRoutes');
-const tableRoutes   = require('./routes/tableRoutes');
-const reportRoutes  = require('./routes/reportRoutes');
-const uploadRoutes  = require('./routes/uploadRoutes');
+const authRoutes         = require('./routes/authRoutes');
+const categoryRoutes     = require('./routes/categoryRoutes');
+const itemRoutes         = require('./routes/itemRoutes');
+const orderRoutes        = require('./routes/orderRoutes');
+const tableRoutes        = require('./routes/tableRoutes');
+const reportRoutes       = require('./routes/reportRoutes');
+const uploadRoutes       = require('./routes/uploadRoutes');
+const notificationRoutes = require('./routes/notificationRoutes'); // ✨ Route thông báo
+const paymentRoutes      = require('./routes/paymentRoutes');      // ✨ Route thanh toán
 
 // ---- KHỞI TẠO EXPRESS APP ----
 const app = express();
@@ -65,13 +67,15 @@ app.get('/', (req, res) => {
 
 // ---- SETUP API ROUTES (PREFIX /api) ----
 // Tất cả API routes đều có prefix /api
-app.use('/api/auth',       authRoutes);
-app.use('/api/orders',     orderRoutes);
-app.use('/api/tables',     tableRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/items',      itemRoutes);
-app.use('/api/reports',    reportRoutes);
-app.use('/api/upload',     uploadRoutes); // Route upload ảnh Cloudinary
+app.use('/api/auth',          authRoutes);
+app.use('/api/orders',        orderRoutes);
+app.use('/api/tables',        tableRoutes);
+app.use('/api/categories',    categoryRoutes);
+app.use('/api/items',         itemRoutes);
+app.use('/api/reports',       reportRoutes);
+app.use('/api/upload',        uploadRoutes);     // Route upload ảnh Cloudinary
+app.use('/api/notifications', notificationRoutes); // ✨ Route hệ thống thông báo
+app.use('/api/payments',      paymentRoutes);      // ✨ Route thanh toán
 
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----

@@ -1,5 +1,21 @@
-let Item = require('../models/Item');
-let slugify = require('slugify');
+/**
+ * Controller: itemController.js
+ * 
+ * Xử lý các logic nghiệp vụ liên quan đến món ăn:
+ * - CRUD operations (Create, Read, Update, Delete)
+ * - Upload ảnh lên Cloudinary
+ * - Tạo slug SEO-friendly
+ * - Soft delete (đánh dấu xóa thay vì xóa thật)
+ * 
+ * Dependencies:
+ * - Item model: Schema MongoDB cho món ăn
+ * - slugify: Tạo URL slug từ tên món
+ * - cloudinary: Upload ảnh lên cloud storage
+ * - streamifier: Chuyển đổi buffer thành stream cho Cloudinary
+ */
+
+const Item = require('../models/Item');
+const slugify = require('slugify');
 
 module.exports = {
     // Lấy tất cả món ăn
@@ -69,21 +85,94 @@ module.exports = {
         return { restored: false, data: newItem };
     },
 
-    // Cập nhật món ăn
+    // Cập nhật món ăn theo ID
     UpdateItem: async function (id, data, file = null) {
         let itemData = { ...data };
+        
+        /**
+         * XỬ LÝ UPLOAD ẢNH MỚI (nếu có)
+         * - Nếu client gửi file ảnh mới → upload lên Cloudinary
+         * - Nếu không có file → giữ nguyên ảnh cũ (không thay đổi trường image)
+         */
         if (file) {
-            itemData.image = `/uploads/${file.filename}`;
-        }
-        if (itemData.name) {
-            itemData.slug = slugify(itemData.name, { lower: true, strict: true });
+            console.log('📤 Có ảnh mới, đang upload lên Cloudinary...');
+            try {
+                // Upload ảnh lên Cloudinary bằng buffer (memory storage)
+                const cloudinary = require('../config/cloudinary');
+                const streamifier = require('streamifier');
+                
+                // Tạo promise để upload file buffer lên Cloudinary
+                const uploadFromBuffer = () => {
+                    return new Promise((resolve, reject) => {
+                        const uploadStream = cloudinary.uploader.upload_stream(
+                            {
+                                folder: 'coffee-shop/items',  // Thư mục lưu trên Cloudinary
+                                transformation: [
+                                    { width: 800, height: 600, crop: 'fit' },  // Resize ảnh
+                                    { quality: 'auto' }  // Tự động optimize chất lượng
+                                ]
+                            },
+                            (error, result) => {
+                                if (error) reject(error);
+                                else resolve(result);
+                            }
+                        );
+                        
+                        // Chuyển buffer thành stream và pipe vào Cloudinary
+                        streamifier.createReadStream(file.buffer).pipe(uploadStream);
+                    });
+                };
+                
+                const cloudinaryResult = await uploadFromBuffer();
+                itemData.image = cloudinaryResult.secure_url;  // Lưu URL ảnh từ Cloudinary
+                console.log('✅ Upload ảnh thành công:', cloudinaryResult.secure_url);
+                
+            } catch (uploadError) {
+                console.error('❌ Lỗi upload ảnh:', uploadError.message);
+                throw new Error('Upload ảnh thất bại: ' + uploadError.message);
+            }
+        } else {
+            console.log('📷 Không có ảnh mới, giữ nguyên ảnh cũ');
         }
         
-        return await Item.findOneAndUpdate(
-            { _id: id, isDeleted: false },
-            itemData,
-            { new: true, runValidators: true }
+        /**
+         * TẠO SLUG TỰ ĐỘNG TỪ TÊN MÓN
+         * - Chuyển tên món thành slug URL-friendly (vd: "Cà phê đen" → "ca-phe-den")
+         * - Dùng cho SEO và URL clean
+         */
+        if (itemData.name) {
+            const slugify = require('slugify');
+            itemData.slug = slugify(itemData.name, { 
+                lower: true,           // Chuyển thành chữ thường
+                strict: true,          // Xóa ký tự đặc biệt
+                locale: 'vi'           // Hỗ trợ tiếng Việt
+            });
+            console.log(`🔗 Slug được tạo: "${itemData.name}" → "${itemData.slug}"`);
+        }
+        
+        /**
+         * CẬP NHẬT VÀO DATABASE
+         * - Chỉ update các món chưa bị xóa (isDeleted: false)
+         * - runValidators: true → Chạy validation schema trước khi lưu
+         * - new: true → Trả về dữ liệu sau khi update (thay vì trước update)
+         */
+        console.log(`🔄 Đang cập nhật món ăn ID: ${id}`);
+        const updatedItem = await Item.findOneAndUpdate(
+            { _id: id, isDeleted: false },  // Điều kiện: tìm theo ID và chưa xóa
+            itemData,                       // Dữ liệu cập nhật
+            { 
+                new: true,                  // Trả về bản ghi sau khi update
+                runValidators: true         // Chạy validation Mongoose
+            }
         );
+        
+        if (!updatedItem) {
+            console.log('❌ Không tìm thấy món ăn hoặc món đã bị xóa');
+            throw new Error('Món ăn không tồn tại hoặc đã bị xóa');
+        }
+        
+        console.log('✅ Cập nhật món ăn thành công');
+        return updatedItem;
     },
 
     // Xóa món ăn (Soft delete)

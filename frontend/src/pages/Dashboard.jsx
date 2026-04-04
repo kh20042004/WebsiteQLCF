@@ -1,27 +1,31 @@
 /**
- * Trang: Bảng Điều Khiển (Dashboard)
+ * Trang: Bảng Điều Khiển (Dashboard) - ĐÃ CÓ PHÂN QUYỀN
  *
- * Mục đích: Trang tổng quan đầu tiên khi vào hệ thống, cung cấp cái nhìn nhanh về
- * tình trạng hoạt động của quán trong ngày.
+ * Mục đích: Trang tổng quan đầu tiên khi vào hệ thống
  *
- * Các khối thông tin:
+ * 📌 PHÂN QUYỀN:
+ * - ADMIN: Thấy tất cả (doanh thu, top món, thống kê đầy đủ)
+ * - STAFF: Chỉ thấy việc cần làm (bàn chờ, đơn pending, thông báo công việc)
+ *
+ * Khối thông tin:
  * - Chào mừng nhân viên theo tên + giờ trong ngày
- * - 4 thẻ KPI: Doanh thu hôm nay, Đơn hoàn thành, Bàn đang dùng, Đơn đang chờ
- * - Top 5 món bán chạy nhất hôm nay
- * - Danh sách bàn đang có khách (occupied) để theo dõi nhanh
- * - Lối tắt điều hướng đến các trang chức năng
+ * - [ADMIN] 4 thẻ KPI: Doanh thu hôm nay, Đơn hoàn thành, Bàn đang dùng, Đơn đang chờ
+ * - [ADMIN] Top 5 món bán chạy nhất hôm nay
+ * - [STAFF] Danh sách bàn đang có khách (để phục vụ)
+ * - [STAFF] Đơn hàng cần xử lý (pending, serving)
  *
  * API sử dụng:
- * - GET /reports/daily    → doanh thu + số đơn hoàn thành hôm nay
- * - GET /reports/top-items → top 5 món bán chạy
- * - GET /tables           → trạng thái bàn (occupied / available / reserved)
- * - GET /orders           → đơn đang chờ xử lý
+ * - GET /reports/daily    → doanh thu + số đơn (CHỈ ADMIN)
+ * - GET /reports/top-items → top 5 món bán chạy (CHỈ ADMIN)
+ * - GET /tables           → trạng thái bàn (TẤT CẢ)
+ * - GET /orders           → đơn đang chờ xử lý (TẤT CẢ)
  */
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getDailyReport, getTopItems } from '../services/reportService';
 import { apiGet } from '../services/api';
+import { isAdmin } from '../utils/auth'; // Import helper function
 
 // ---- HÀM TIỆN ÍCH ----
 
@@ -73,26 +77,41 @@ function Dashboard() {
     /**
      * Tải toàn bộ dữ liệu cần thiết cho dashboard cùng lúc
      * Dùng Promise.allSettled để không block nếu 1 API lỗi
+     * 
+     * PHÂN QUYỀN:
+     * - Admin: Gọi tất cả API (reports, tables, orders)
+     * - Staff: Chỉ gọi tables và orders (không gọi reports vì không có quyền)
      */
     const fetchAll = async () => {
         setLoading(true);
         try {
-            const [dailyRes, topRes, tablesRes, ordersRes] = await Promise.allSettled([
-                getDailyReport(todayStr),      // Doanh thu + số đơn hôm nay
-                getTopItems(todayStr),          // Top 5 món bán chạy
-                apiGet('/tables'),              // Trạng thái bàn
-                apiGet('/orders')               // Toàn bộ đơn để lọc pending
-            ]);
+            // Nếu là Admin → gọi đầy đủ API (bao gồm reports)
+            // Nếu là Staff → chỉ gọi tables và orders (bỏ reports)
+            const promises = isAdmin() 
+                ? [
+                    getDailyReport(todayStr),      // Doanh thu + số đơn hôm nay (CHỈ ADMIN)
+                    getTopItems(todayStr),          // Top 5 món bán chạy (CHỈ ADMIN)
+                    apiGet('/tables'),              // Trạng thái bàn
+                    apiGet('/orders')               // Toàn bộ đơn để lọc pending
+                  ]
+                : [
+                    Promise.resolve(null),          // Placeholder - Staff không gọi daily report
+                    Promise.resolve(null),          // Placeholder - Staff không gọi top items
+                    apiGet('/tables'),              // Trạng thái bàn
+                    apiGet('/orders')               // Toàn bộ đơn để lọc pending
+                  ];
+
+            const [dailyRes, topRes, tablesRes, ordersRes] = await Promise.allSettled(promises);
 
             // Xử lý từng kết quả — chỉ cập nhật nếu API thành công
-            if (dailyRes.status === 'fulfilled') {
+            if (dailyRes.status === 'fulfilled' && dailyRes.value) {
                 setReportData({
                     totalRevenue: dailyRes.value?.totalRevenue || 0,
                     totalOrders:  dailyRes.value?.totalOrders  || 0
                 });
             }
 
-            if (topRes.status === 'fulfilled') {
+            if (topRes.status === 'fulfilled' && topRes.value) {
                 setTopItems(topRes.value || []);
             }
 
@@ -171,42 +190,49 @@ function Dashboard() {
             </div>
 
             {/* ---- 4 THẺ KPI CHÍNH ---- */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* ADMIN: Hiển thị tất cả 4 KPI (bao gồm doanh thu + đơn hoàn thành) */}
+            {/* STAFF: Chỉ hiển thị 2 KPI (bàn đang dùng + đơn đang chờ) */}
+            <div className={`grid gap-4 mb-8 ${isAdmin() ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'}`}>
 
-                {/* KPI 1: Doanh thu hôm nay */}
-                <div className="bg-white border border-stone-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-                            Doanh Thu Hôm Nay
-                        </p>
-                        {/* Icon tiền */}
-                        <span className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg">
-                            💰
-                        </span>
-                    </div>
-                    <p className="text-2xl font-black text-emerald-600 tracking-tight">
-                        {loading ? '—' : formatCurrency(reportData.totalRevenue)}
-                    </p>
-                    <p className="text-xs text-stone-400 mt-1">Từ các đơn đã thanh toán</p>
-                </div>
+                {/* KPI 1 & 2: Doanh thu + Đơn hoàn thành - CHỈ ADMIN 🔒 */}
+                {isAdmin() && (
+                    <>
+                        {/* KPI 1: Doanh thu hôm nay */}
+                        <div className="bg-white border border-stone-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center justify-between mb-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                                    Doanh Thu Hôm Nay
+                                </p>
+                                {/* Icon tiền */}
+                                <span className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg">
+                                    💰
+                                </span>
+                            </div>
+                            <p className="text-2xl font-black text-emerald-600 tracking-tight">
+                                {loading ? '—' : formatCurrency(reportData.totalRevenue)}
+                            </p>
+                            <p className="text-xs text-stone-400 mt-1">Từ các đơn đã thanh toán</p>
+                        </div>
 
-                {/* KPI 2: Số đơn hoàn thành hôm nay */}
-                <div className="bg-white border border-stone-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-                            Đơn Hoàn Thành
-                        </p>
-                        <span className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg">
-                            ✅
-                        </span>
-                    </div>
-                    <p className="text-2xl font-black text-blue-600 tracking-tight">
-                        {loading ? '—' : reportData.totalOrders}
-                    </p>
-                    <p className="text-xs text-stone-400 mt-1">Trong ngày hôm nay</p>
-                </div>
+                        {/* KPI 2: Số đơn hoàn thành hôm nay */}
+                        <div className="bg-white border border-stone-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center justify-between mb-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                                    Đơn Hoàn Thành
+                                </p>
+                                <span className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg">
+                                    ✅
+                                </span>
+                            </div>
+                            <p className="text-2xl font-black text-blue-600 tracking-tight">
+                                {loading ? '—' : reportData.totalOrders}
+                            </p>
+                            <p className="text-xs text-stone-400 mt-1">Trong ngày hôm nay</p>
+                        </div>
+                    </>
+                )}
 
-                {/* KPI 3: Bàn đang có khách */}
+                {/* KPI 3: Bàn đang có khách - TẤT CẢ user */}
                 <div className="bg-white border border-stone-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
@@ -222,7 +248,7 @@ function Dashboard() {
                     <p className="text-xs text-stone-400 mt-1">{availableTables} bàn còn trống</p>
                 </div>
 
-                {/* KPI 4: Đơn đang chờ xử lý */}
+                {/* KPI 4: Đơn đang chờ xử lý - TẤT CẢ user */}
                 <div className="bg-white border border-stone-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
@@ -240,59 +266,65 @@ function Dashboard() {
             </div>
 
             {/* ---- PHẦN GIỮA: Top món + Bàn đang dùng ---- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Layout khác nhau theo role:
+                - ADMIN: Grid 2 cột (Top món + Bàn đang dùng)
+                - STAFF: Full width (chỉ Bàn đang dùng)
+            */}
+            <div className={`grid gap-6 mb-8 ${isAdmin() ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
 
-                {/* ---- TOP 5 MÓN BÁN CHẠY ---- */}
-                <div className="bg-white border border-stone-100 rounded-2xl shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-                        <h2 className="font-semibold text-stone-900">🏆 Top Món Bán Chạy Hôm Nay</h2>
-                        <Link to="/reports" className="text-xs text-amber-600 hover:underline font-medium">
-                            Xem báo cáo →
-                        </Link>
+                {/* ---- TOP 5 MÓN BÁN CHẠY - CHỈ ADMIN 🔒 ---- */}
+                {isAdmin() && (
+                    <div className="bg-white border border-stone-100 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+                            <h2 className="font-semibold text-stone-900">🏆 Top Món Bán Chạy Hôm Nay</h2>
+                            <Link to="/reports" className="text-xs text-amber-600 hover:underline font-medium">
+                                Xem báo cáo →
+                            </Link>
+                        </div>
+
+                        {loading ? (
+                            // Skeleton loading
+                            <div className="p-6 space-y-3">
+                                {[1,2,3].map(i => (
+                                    <div key={i} className="h-12 bg-stone-100 rounded-xl animate-pulse" />
+                                ))}
+                            </div>
+                        ) : topItems.length === 0 ? (
+                            // Trạng thái rỗng
+                            <div className="p-10 text-center text-stone-400">
+                                <p className="text-4xl mb-2">☕</p>
+                                <p className="text-sm italic">Chưa có đơn nào hoàn thành hôm nay</p>
+                            </div>
+                        ) : (
+                            // Danh sách top món
+                            <div className="divide-y divide-stone-50">
+                                {topItems.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-4 px-6 py-3.5 hover:bg-stone-50 transition-colors">
+                                        {/* Hạng (màu khác nhau cho top 3) */}
+                                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                                            idx === 0 ? 'bg-amber-400 text-white' :
+                                            idx === 1 ? 'bg-stone-300 text-stone-700' :
+                                            idx === 2 ? 'bg-orange-300 text-white' :
+                                            'bg-stone-100 text-stone-500'
+                                        }`}>
+                                            {idx + 1}
+                                        </span>
+
+                                        {/* Tên món */}
+                                        <span className="flex-grow text-sm font-medium text-stone-800 truncate">
+                                            {item.name || 'Không rõ'}
+                                        </span>
+
+                                        {/* Số lượng bán */}
+                                        <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full flex-shrink-0">
+                                            {item.totalSold} phần
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-
-                    {loading ? (
-                        // Skeleton loading
-                        <div className="p-6 space-y-3">
-                            {[1,2,3].map(i => (
-                                <div key={i} className="h-12 bg-stone-100 rounded-xl animate-pulse" />
-                            ))}
-                        </div>
-                    ) : topItems.length === 0 ? (
-                        // Trạng thái rỗng
-                        <div className="p-10 text-center text-stone-400">
-                            <p className="text-4xl mb-2">☕</p>
-                            <p className="text-sm italic">Chưa có đơn nào hoàn thành hôm nay</p>
-                        </div>
-                    ) : (
-                        // Danh sách top món
-                        <div className="divide-y divide-stone-50">
-                            {topItems.map((item, idx) => (
-                                <div key={idx} className="flex items-center gap-4 px-6 py-3.5 hover:bg-stone-50 transition-colors">
-                                    {/* Hạng (màu khác nhau cho top 3) */}
-                                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                                        idx === 0 ? 'bg-amber-400 text-white' :
-                                        idx === 1 ? 'bg-stone-300 text-stone-700' :
-                                        idx === 2 ? 'bg-orange-300 text-white' :
-                                        'bg-stone-100 text-stone-500'
-                                    }`}>
-                                        {idx + 1}
-                                    </span>
-
-                                    {/* Tên món */}
-                                    <span className="flex-grow text-sm font-medium text-stone-800 truncate">
-                                        {item.name || 'Không rõ'}
-                                    </span>
-
-                                    {/* Số lượng bán */}
-                                    <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full flex-shrink-0">
-                                        {item.totalSold} phần
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                )}
 
                 {/* ---- BÀN ĐANG CÓ KHÁCH ---- */}
                 <div className="bg-white border border-stone-100 rounded-2xl shadow-sm overflow-hidden">

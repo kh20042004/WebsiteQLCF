@@ -1,6 +1,17 @@
+/**
+ * OrdersPage - Trang quản lý đơn hàng (ĐÃ CÓ PHÂN QUYỀN)
+ * 
+ * Chức năng:
+ * - Xem danh sách đơn hàng (Staff + Admin)
+ * - Xem chi tiết đơn hàng (Staff + Admin)
+ * - Cập nhật trạng thái đơn (Staff + Admin)
+ * - Xóa đơn hàng (CHỈ ADMIN) 🔒
+ */
+
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Clock, CheckCircle2, AlertCircle, Trash2, Eye } from 'lucide-react';
 import { getOrders, deleteOrder, updateOrderStatus } from '../services/orderService';
+import { isAdmin } from '../utils/auth'; // Import helper function
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -322,12 +333,13 @@ const OrdersPage = () => {
                       <Eye className="w-5 h-5" />
                     </button>
 
-                    {/* Nút xóa — chỉ hiển thị cho đơn chưa done */}
-                    {order.status !== 'done' && (
+                    {/* Nút XÓA - CHỈ ADMIN mới thấy 🔒 */}
+                    {/* Chỉ hiển thị cho đơn chưa done VÀ user là admin */}
+                    {isAdmin() && order.status !== 'done' && (
                       <button
                         onClick={() => setConfirmDelete(order._id)}
                         className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                        title="Xóa đơn"
+                        title="Xóa đơn (Chỉ Admin)"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>

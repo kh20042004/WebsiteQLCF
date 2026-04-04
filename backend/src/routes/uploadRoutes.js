@@ -1,5 +1,5 @@
 /**
- * Routes: uploadRoutes.js
+ * Routes: uploadRoutes.js (ĐÃ PHÂN QUYỀN)
  *
  * Định nghĩa các API endpoint cho chức năng upload và quản lý ảnh
  * Prefix: /api/upload (đã được khai báo trong app.js)
@@ -14,9 +14,16 @@
  * │ DELETE │ /api/upload/:id       │ Xóa ảnh (Cloudinary + MongoDB)  │
  * └─────────────────────────────────────────────────────────────────┘
  *
- * Bảo mật:
- * - Tất cả route đều yêu cầu xác thực JWT (middleware authenticate)
- * - Multer xử lý multipart/form-data trước khi vào controller
+ * 📌 PHÂN QUYỀN:
+ * - POST /upload/single      → CHỈ ADMIN (tránh nhân viên upload bừa bãi)
+ * - POST /upload/multiple    → CHỈ ADMIN
+ * - GET  /upload             → Staff + Admin (xem danh sách ảnh)
+ * - GET  /upload/:id         → Staff + Admin (xem chi tiết ảnh)
+ * - DELETE /upload/:id       → CHỈ ADMIN (xóa ảnh — thao tác nguy hiểm)
+ *
+ * Lý do Admin-only cho upload:
+ * → Tránh nhân viên upload ảnh không phù hợp hoặc spam ảnh
+ * → Chỉ quản lý mới có quyền thêm/xóa tài nguyên hình ảnh
  *
  * Cách dùng (Postman / Frontend):
  * - Upload 1 ảnh   : POST /api/upload/single   — Body: form-data, key "image"
@@ -30,12 +37,13 @@ const express = require('express');
 const router = express.Router();
 
 // ---- IMPORT MIDDLEWARE ----
-const authenticate = require('../middlewares/authenticate'); // Xác thực JWT
+const authenticate = require('../middlewares/authenticate');
+const { requireAdmin, requireStaff } = require('../middlewares/authenticate');
 
 // ---- IMPORT MULTER MIDDLEWARE ----
 // uploadSingle : nhận 1 file, field name = "image"
 // uploadMultiple: nhận nhiều file, field name = "images", tối đa 10 file
-const { uploadSingle, uploadMultiple } = require('../config/multer');
+const { uploadSingle, uploadMultiple } = require('../utils/uploadHandler');
 
 // ---- IMPORT CONTROLLER ----
 const {
@@ -50,11 +58,13 @@ const {
 // ============================================================
 // POST /api/upload/single
 // Upload 1 ảnh lên Cloudinary
+// CHỈ ADMIN: Chỉ quản lý mới được upload ảnh mới
 //
 // Middleware thực thi theo thứ tự:
 // 1. authenticate   — Kiểm tra JWT token hợp lệ
-// 2. uploadSingle   — Multer nhận file từ form-data (field "image")
-// 3. uploadSingleImage — Controller xử lý upload lên Cloudinary + lưu DB
+// 2. requireAdmin   — Kiểm tra phải là admin
+// 3. uploadSingle   — Multer nhận file từ form-data (field "image")
+// 4. uploadSingleImage — Controller xử lý upload lên Cloudinary + lưu DB
 //
 // Cách gửi request (Postman):
 // - Headers: Authorization: Bearer <token>
@@ -62,15 +72,17 @@ const {
 // ============================================================
 router.post(
   '/single',
-  authenticate,    // Bước 1: Xác thực token
-  uploadSingle,    // Bước 2: Multer xử lý file upload
-  uploadSingleImage // Bước 3: Upload lên Cloudinary + lưu DB
+  authenticate,         // Bước 1: Xác thực token
+  requireAdmin,         // Bước 2: Kiểm tra phải admin
+  uploadSingle,         // Bước 3: Multer xử lý file upload
+  uploadSingleImage     // Bước 4: Upload lên Cloudinary + lưu DB
 );
 
 
 // ============================================================
 // POST /api/upload/multiple
 // Upload nhiều ảnh cùng lúc (tối đa 10 ảnh)
+// CHỈ ADMIN: Chỉ quản lý mới được upload nhiều ảnh
 //
 // Cách gửi request (Postman):
 // - Headers: Authorization: Bearer <token>
@@ -79,14 +91,16 @@ router.post(
 router.post(
   '/multiple',
   authenticate,         // Bước 1: Xác thực token
-  uploadMultiple,       // Bước 2: Multer nhận nhiều file
-  uploadMultipleImages  // Bước 3: Upload tất cả lên Cloudinary + lưu DB
+  requireAdmin,         // Bước 2: Kiểm tra phải admin
+  uploadMultiple,       // Bước 3: Multer nhận nhiều file
+  uploadMultipleImages  // Bước 4: Upload tất cả lên Cloudinary + lưu DB
 );
 
 
 // ============================================================
 // GET /api/upload
 // Lấy danh sách tất cả ảnh đã upload (có phân trang)
+// Staff + Admin: Cả hai đều có thể xem danh sách ảnh
 //
 // Query params:
 // - ?page=1       → Trang cần xem (mặc định: 1)
@@ -97,35 +111,42 @@ router.post(
 // ============================================================
 router.get(
   '/',
-  authenticate,  // Yêu cầu đăng nhập
-  getAllImages    // Lấy danh sách ảnh
+  authenticate,     // Yêu cầu đăng nhập
+  requireStaff,     // Staff + Admin đều xem được
+  getAllImages      // Lấy danh sách ảnh
 );
 
 
 // ============================================================
 // GET /api/upload/:id
 // Lấy thông tin chi tiết 1 ảnh theo MongoDB _id
+// Staff + Admin: Cả hai đều có thể xem chi tiết ảnh
 //
 // Ví dụ: GET /api/upload/64f1a2b3c4d5e6f7a8b9c0d1
 // ============================================================
 router.get(
   '/:id',
-  authenticate,  // Yêu cầu đăng nhập
-  getImageById   // Lấy chi tiết ảnh
+  authenticate,     // Yêu cầu đăng nhập
+  requireStaff,     // Staff + Admin đều xem được
+  getImageById      // Lấy chi tiết ảnh
 );
 
 
 // ============================================================
 // DELETE /api/upload/:id
 // Xóa ảnh theo MongoDB _id
+// CHỈ ADMIN: Chỉ quản lý mới được xóa ảnh
 // → Xóa trên Cloudinary + xóa bản ghi trong MongoDB
+//
+// Lý do: Tránh nhân viên xóa nhầm ảnh đang được dùng trong menu
 //
 // Ví dụ: DELETE /api/upload/64f1a2b3c4d5e6f7a8b9c0d1
 // ============================================================
 router.delete(
   '/:id',
-  authenticate,  // Yêu cầu đăng nhập
-  deleteImage    // Xóa ảnh
+  authenticate,     // Bước 1: Xác thực token
+  requireAdmin,     // Bước 2: Kiểm tra phải admin
+  deleteImage       // Bước 3: Xóa ảnh
 );
 
 
