@@ -1,5 +1,28 @@
 const Item = require('../models/Item');
 const Category = require('../models/Category');
+const cloudinary = require('../config/cloudinary');
+
+/**
+ * Hàm helper: Upload buffer ảnh lên Cloudinary
+ * multer memoryStorage lưu file trong req.file.buffer
+ * Cần dùng upload_stream để push buffer lên Cloudinary
+ */
+const uploadImageToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'coffee-shop/products', // Lưu vào thư mục này trên Cloudinary
+        quality: 'auto',               // Tự động tối ưu chất lượng ảnh
+        fetch_format: 'auto',          // Tự chọn định dạng tốt nhất (WebP...)
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    stream.end(buffer); // Đẩy buffer vào stream để upload
+  });
+};
 
 /**
  * Lấy danh sách sản phẩm (Món)
@@ -75,24 +98,20 @@ const createItem = async (req, res, next) => {
       });
     }
 
-    // --- Xử lý logic upload ảnh ---
-    const itemData = req.body;
+    const itemData = { ...req.body };
 
-    // Debug dữ liệu cho create (Xóa sau khi fix xong)
-    console.log('Create Data received:', itemData);
-    console.log('File for create:', req.file);
-    
-    // Nếu có file upload từ Multer (req.file)
-    if (req.file) {
-      // Lưu địa chỉ URL của ảnh thật trên server
-      itemData.image = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    // Nếu có file ảnh đính kèm (từ multer memoryStorage)
+    if (req.file && req.file.buffer) {
+      // Upload buffer lên Cloudinary, lấy URL an toàn (https)
+      const cloudResult = await uploadImageToCloudinary(req.file.buffer);
+      itemData.image = cloudResult.secure_url;
     } else {
-      // Nếu không có file mới, đảm bảo không lưu Object trống {} vào trường image của MongoDB
-      if (typeof itemData.image === 'object' || itemData.image === '{}' || itemData.image === '[object Object]') {
+      // Không có file mới → xóa trường image rỗng để tránh lưu {} vào DB
+      if (!itemData.image || typeof itemData.image === 'object') {
         delete itemData.image;
       }
     }
-    
+
     // Tạo sản phẩm mới
     const newItem = await Item.create(itemData);
 
@@ -122,19 +141,16 @@ const updateItem = async (req, res, next) => {
       }
     }
 
-    // --- Xử lý logic cập nhật ảnh ---
-    const updateData = req.body;
+    const updateData = { ...req.body };
 
-    // Debug dữ liệu nhận được (Xóa sau khi fix xong)
-    console.log('Update Data received:', updateData);
-    console.log('File received:', req.file);
-
-    // Nếu có file mới được upload từ Multer
-    if (req.file) {
-      updateData.image = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    // Nếu có file ảnh mới đính kèm (từ multer memoryStorage)
+    if (req.file && req.file.buffer) {
+      // Upload buffer lên Cloudinary, lấy URL an toàn (https)
+      const cloudResult = await uploadImageToCloudinary(req.file.buffer);
+      updateData.image = cloudResult.secure_url; // URL Cloudinary
     } else {
-      // Nếu KHÔNG có file mới, đảm bảo không lưu Object trống {} vào trường image
-      if (typeof updateData.image === 'object' || updateData.image === '{}' || updateData.image === '[object Object]') {
+      // Không có file mới → giữ ảnh cũ, xóa giá trị rỗng tránh ghi đè vào DB
+      if (!updateData.image || typeof updateData.image === 'object') {
         delete updateData.image;
       }
     }

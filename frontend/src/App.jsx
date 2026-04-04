@@ -25,6 +25,7 @@ import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import TablesPage from './pages/TablesPage';
 import MenuPage from './pages/MenuPage';
 import OrdersPage from './pages/OrdersPage';
@@ -48,9 +49,10 @@ function App() {
     <BrowserRouter>
       <Routes>
 
-        {/* ---- ROUTE CÔNG KHAI: Trang đăng nhập ---- */}
+        {/* ---- ROUTE CÔNG KHAI: Đăng nhập & Đăng ký ---- */}
         {/* Không cần token — ai cũng truy cập được */}
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         {/* ---- ROUTE BẢO MẬT: Toàn bộ app chính ---- */}
         {/* PrivateRoute kiểm tra localStorage.token, redirect /login nếu chưa đăng nhập */}

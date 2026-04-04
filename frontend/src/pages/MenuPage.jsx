@@ -64,12 +64,14 @@ const MenuPage = () => {
    */
   const handleSaveItem = async (formData) => {
     try {
+      // formData là FormData object → dùng .get() thay vì .name trực tiếp
+      const itemName = formData.get('name');
       if (editingItem) {
         await itemService.updateItem(editingItem._id, formData);
-        showNotification(`Đã cập nhật món "${formData.name}" thành công`);
+        showNotification(`Đã cập nhật món "${itemName}" thành công`);
       } else {
         await itemService.createItem(formData);
-        showNotification(`Đã thêm món "${formData.name}" vào thực đơn`);
+        showNotification(`Đã thêm món "${itemName}" vào thực đơn`);
       }
       fetchItems(searchTerm);
     } catch (err) {

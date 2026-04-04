@@ -18,14 +18,18 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // KHÔNG đặt Content-Type mặc định ở đây
+  // Lý do: khi gửi FormData (upload file), axios cần tự set
+  // 'Content-Type: multipart/form-data; boundary=...'
+  // Nếu đặt cứng 'application/json' sẽ override và multer không nhận được file
 });
 
 /**
  * Interceptor: Request
  * - Thêm JWT token vào header Authorization trước mỗi request
+ * - Tự động set Content-Type phù hợp:
+ *   + FormData  → để trống (axios tự set multipart/form-data + boundary)
+ *   + JSON data → application/json
  */
 api.interceptors.request.use(
   (config) => {
@@ -35,6 +39,15 @@ api.interceptors.request.use(
     // Nếu có token, thêm vào header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Nếu data là FormData (upload file) → KHÔNG set Content-Type
+    // Axios sẽ tự động set 'multipart/form-data; boundary=...'
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']; // Xóa để axios tự set
+    } else {
+      // JSON request bình thường → set application/json
+      config.headers['Content-Type'] = 'application/json';
     }
 
     return config;

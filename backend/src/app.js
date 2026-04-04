@@ -1,30 +1,40 @@
 /**
  * File chính: Khởi tạo Express server
- * 
+ *
  * Nhiệm vụ:
  * - Setup Express app
  * - Kết nối MongoDB
  * - Import và sử dụng các routes
  * - Setup middleware (CORS, JSON parser, error handler)
+ *
+ * QUAN TRỌNG: dotenv.config() phải được gọi ĐẦU TIÊN
+ * trước khi require bất kỳ file nào sử dụng process.env
+ * (Cloudinary config, Database config...)
  */
 
-// ---- IMPORT CÁC THƯ VIỆN ----
-const express = require('express');
+// ---- BƯỚC 1: LOAD BIẾN MÔI TRƯỜNG TỪ .env ----
+// Phải là dòng đầu tiên trước tất cả require khác!
 const dotenv = require('dotenv');
-const cors = require('cors');
-const connectDB = require('./config/database');
-const orderRoutes = require('./routes/orderRoutes');
-
-// ---- IMPORT ROUTES ----
-const tableRoutes = require('./routes/tableRoutes');
-const uploadRoutes = require('./routes/uploadRoutes');
-
-// ---- LOAD BIẾN MÔI TRƯỜNG TỪ .env ----
 dotenv.config();
 
-// ---- KHỞI TẠO CLOUDINARY (đọc từ .env) ----
-// Import cloudinary config để cấu hình trước khi dùng trong controllers
+// ---- BƯỚC 2: IMPORT CÁC THƯ VIỆN ----
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const connectDB = require('./config/database');
+
+// ---- BƯỚC 3: KHỞI TẠO CLOUDINARY (sau khi dotenv đã load xong) ----
+// Cloudinary đọc process.env khi được require → phải sau dotenv.config()
 require('./config/cloudinary');
+
+// ---- BƯỚC 4: IMPORT ROUTES (sau khi Cloudinary sẵn sàng) ----
+const authRoutes    = require('./routes/authRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const itemRoutes    = require('./routes/itemRoutes');
+const orderRoutes   = require('./routes/orderRoutes');
+const tableRoutes   = require('./routes/tableRoutes');
+const reportRoutes  = require('./routes/reportRoutes');
+const uploadRoutes  = require('./routes/uploadRoutes');
 
 // ---- KHỞI TẠO EXPRESS APP ----
 const app = express();
@@ -39,15 +49,13 @@ app.use(express.json());
 // Middleware: Parse URL-encoded data
 app.use(express.urlencoded({ extended: true }));
 
-// ---- SERVICE STATIC FILES (Ảnh sản phẩm) ----
-const path = require('path');
+// ---- SERVICE STATIC FILES (Ảnh sản phẩm lưu local - fallback) ----
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ---- KẾT NỐI DATABASE ----
 connectDB();
 
 // ---- ROUTE MẶC ĐỊNH ----
-// GET /
 app.get('/', (req, res) => {
   res.json({
     message: '☕ Chào mừng đến API quản lý quán cà phê',
@@ -55,22 +63,15 @@ app.get('/', (req, res) => {
   });
 });
 
-// ---- SỬ DỤNG ROUTES ----
-// Import routes
-const authRoutes = require('./routes/authRoutes');
-const categoryRoutes = require('./routes/categoryRoutes');
-const itemRoutes = require('./routes/itemRoutes');
-const reportRoutes = require('./routes/reportRoutes');
-
 // ---- SETUP API ROUTES (PREFIX /api) ----
 // Tất cả API routes đều có prefix /api
-app.use('/api/auth', authRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/tables', tableRoutes);
+app.use('/api/auth',       authRoutes);
+app.use('/api/orders',     orderRoutes);
+app.use('/api/tables',     tableRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/items', itemRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/upload', uploadRoutes); // Route upload ảnh Cloudinary
+app.use('/api/items',      itemRoutes);
+app.use('/api/reports',    reportRoutes);
+app.use('/api/upload',     uploadRoutes); // Route upload ảnh Cloudinary
 
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
