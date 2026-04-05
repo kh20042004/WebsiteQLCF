@@ -110,7 +110,7 @@ const OrderMenuModal = ({ table, isOpen, onClose, onSuccess }) => {
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-md animate-fade-in" onClick={onClose}></div>
 
-      <div className="relative w-full max-w-6xl h-[90vh] bg-white rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-pop border border-white/20">
+      <div className="relative w-full max-w-[calc(100vw-2rem)] h-[90vh] bg-white rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-pop border border-white/20">
 
         {/* Header */}
         <div className={`px-8 py-6 border-b border-stone-100 flex items-center justify-between transition-all duration-500 ${table.currentOrderId ? 'bg-amber-50/40' : 'bg-white'}`}>
@@ -203,7 +203,7 @@ const OrderMenuModal = ({ table, isOpen, onClose, onSuccess }) => {
           </div>
 
           {/* Checkout Side (Right) */}
-          <div className="w-[420px] bg-stone-50/50 border-l border-stone-100 flex flex-col overflow-hidden">
+          <div className="w-[1500px] bg-stone-50/50 border-l border-stone-100 flex flex-col overflow-hidden">
             <div className="px-6 py-6 border-b border-stone-100 flex items-center justify-between bg-white shadow-sm">
               <div>
                 <h3 className="font-black text-stone-900 text-sm uppercase tracking-wider mb-0.5">Giỏ Hàng</h3>
