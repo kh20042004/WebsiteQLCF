@@ -28,10 +28,10 @@ const { requireAdmin, requireStaff } = require('../middlewares/authenticate');
 
 // ============================================================
 // GET /api/items — Lấy tất cả món ăn
-// Staff + Admin: Cả hai đều cần xem menu
+// Public: Tất cả người dùng (kể cả khách không đăng nhập) đều có thể xem menu
 // Query params: ?search=... &category=... &status=Available|Out of Stock
 // ============================================================
-router.get('/', authenticate, requireStaff, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const { search, category, status } = req.query;
         const items = await itemController.GetAllItems(search, category, status);

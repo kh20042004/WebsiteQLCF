@@ -11,8 +11,10 @@
  *   - /menu        → MenuPage (CHỈ ADMIN - quản lý thực đơn) 🔒
  *   - /orders      → OrdersPage (Staff + Admin)
  *   - /reports     → ReportsPage (CHỈ ADMIN - báo cáo doanh thu) 🔒
- *   - /promotions  → PromotionsPage (CHỈ ADMIN - quản lý khuyến mãi) 🔒
- *   - /inventory   → InventoryPage (CHỈ ADMIN - quản lý kho) 🔒
+ *   - /promotions  → PromotionsPage (TẤT CẢ user quản lý khuyến mãi)
+ *   - /inventory   → InventoryPage (TẤT CẢ user quản lý kho)
+ *   - /shifts      → ShiftsPage (TẤT CẢ user quản lý ca làm việc)
+ *   - /reviews     → ReviewsPage (TẤT CẢ user, khách hàng đánh giá + Admin phê duyệt)
  *   - *            → 404 NotFound
  *
  * 📌 PHÂN QUYỀN:
@@ -45,6 +47,7 @@ import Dashboard from './pages/Dashboard';
 import PromotionsPage from './pages/PromotionsPage';  // ✨ Trang quản lý khuyến mãi
 import InventoryPage from './pages/InventoryPage';    // ✨ Trang quản lý kho nguyên liệu
 import ShiftsPage from './pages/ShiftsPage';          // ✨ Trang quản lý ca làm việc
+import ReviewsPage from './pages/ReviewsPage';        // ✨ Trang quản lý đánh giá
 
 // Trang 404 — hiển thị khi không tìm thấy route
 const NotFound = () => (
@@ -125,7 +128,8 @@ function App() {
 
                       {/* Trang Ca làm việc - Staff + Admin (Staff xem + check-in/out, Admin CRUD) */}
                       <Route path="/shifts" element={<ShiftsPage />} />
-
+                      {/* Trang Đánh giá - TẤT CẢ user đều thấy (khách hàng đánh giá, Admin phê duyệt) */}
+                      <Route path="/reviews" element={<ReviewsPage />} />
 
                       {/* Redirect /login về / nếu đã đăng nhập (tránh truy cập login khi đã có token) */}
                       <Route path="/login" element={<Navigate to="/" replace />} />

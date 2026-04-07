@@ -222,6 +222,21 @@ const Header = () => {
                   <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
                 )}
               </Link>
+
+              {/* Đánh Giá - TẤT CẢ user đều thấy (khách hàng đánh giá, Admin phê duyệt) */}
+              <Link
+                to="/reviews"
+                className={`${
+                  isActiveRoute('/reviews')
+                    ? 'text-stone-900 relative group'
+                    : 'hover:text-stone-900 transition-colors duration-200'
+                }`}
+              >
+                Đánh Giá
+                {isActiveRoute('/reviews') && (
+                  <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
+                )}
+              </Link>
             </nav>
 
             {/* Vùng bên phải: Thông báo + Profile */}

@@ -40,6 +40,7 @@ const paymentRoutes      = require('./routes/paymentRoutes');      // ✨ Route 
 const promotionRoutes    = require('./routes/promotionRoutes');    // ✨ Route khuyến mãi
 const inventoryRoutes    = require('./routes/inventoryRoutes');    // ✨ Route quản lý kho
 const shiftRoutes        = require('./routes/shiftRoutes');        // ✨ Route ca làm việc
+const reviewRoutes       = require('./routes/reviewRoutes');       // ✨ Route đánh giá/review
 
 // ---- KHỞI TẠO EXPRESS APP ----
 const app = express();
@@ -82,6 +83,7 @@ app.use('/api/payments',      paymentRoutes);      // ✨ Route thanh toán
 app.use('/api/promotions',    promotionRoutes);    // ✨ Route khuyến mãi/mã giảm giá
 app.use('/api/inventory',     inventoryRoutes);    // ✨ Route quản lý nguyên liệu/kho
 app.use('/api/shifts',        shiftRoutes);        // ✨ Route ca làm việc/chấm công
+app.use('/api/reviews',       reviewRoutes);       // ✨ Route đánh giá/review từ khách hàng
 
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----
