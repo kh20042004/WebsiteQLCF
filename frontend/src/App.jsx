@@ -11,6 +11,8 @@
  *   - /menu        → MenuPage (CHỈ ADMIN - quản lý thực đơn) 🔒
  *   - /orders      → OrdersPage (Staff + Admin)
  *   - /reports     → ReportsPage (CHỈ ADMIN - báo cáo doanh thu) 🔒
+ *   - /promotions  → PromotionsPage (CHỈ ADMIN - quản lý khuyến mãi) 🔒
+ *   - /inventory   → InventoryPage (CHỈ ADMIN - quản lý kho) 🔒
  *   - *            → 404 NotFound
  *
  * 📌 PHÂN QUYỀN:
@@ -40,6 +42,9 @@ import BillPanel from './components/modals/BillPanel';
 import AddTableModal from './components/modals/AddTableModal';
 import ReportsPage from './pages/ReportsPage';
 import Dashboard from './pages/Dashboard';
+import PromotionsPage from './pages/PromotionsPage';  // ✨ Trang quản lý khuyến mãi
+import InventoryPage from './pages/InventoryPage';    // ✨ Trang quản lý kho nguyên liệu
+import ShiftsPage from './pages/ShiftsPage';          // ✨ Trang quản lý ca làm việc
 
 // Trang 404 — hiển thị khi không tìm thấy route
 const NotFound = () => (
@@ -111,6 +116,15 @@ function App() {
                           </AdminRoute>
                         } 
                       />
+
+                      {/* Trang Khuyến mãi - Staff + Admin (Staff xem, Admin CRUD) */}
+                      <Route path="/promotions" element={<PromotionsPage />} />
+
+                      {/* Trang Kho - Staff + Admin (Staff xem + nhập hàng, Admin CRUD) */}
+                      <Route path="/inventory" element={<InventoryPage />} />
+
+                      {/* Trang Ca làm việc - Staff + Admin (Staff xem + check-in/out, Admin CRUD) */}
+                      <Route path="/shifts" element={<ShiftsPage />} />
 
 
                       {/* Redirect /login về / nếu đã đăng nhập (tránh truy cập login khi đã có token) */}

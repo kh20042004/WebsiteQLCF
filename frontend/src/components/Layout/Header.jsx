@@ -177,6 +177,51 @@ const Header = () => {
                   )}
                 </Link>
               )}
+
+              {/* Khuyến mãi - TẤT CẢ user đều thấy (Staff xem, Admin quản lý) */}
+              <Link
+                to="/promotions"
+                className={`${
+                  isActiveRoute('/promotions')
+                    ? 'text-stone-900 relative group'
+                    : 'hover:text-stone-900 transition-colors duration-200'
+                }`}
+              >
+                Khuyến Mãi
+                {isActiveRoute('/promotions') && (
+                  <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
+                )}
+              </Link>
+
+              {/* Kho - TẤT CẢ user đều thấy (Staff xem + nhập hàng, Admin quản lý) */}
+              <Link
+                to="/inventory"
+                className={`${
+                  isActiveRoute('/inventory')
+                    ? 'text-stone-900 relative group'
+                    : 'hover:text-stone-900 transition-colors duration-200'
+                }`}
+              >
+                Kho
+                {isActiveRoute('/inventory') && (
+                  <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
+                )}
+              </Link>
+
+              {/* Ca Làm Việc - TẤT CẢ user đều thấy (Staff check-in/out, Admin xếp ca) */}
+              <Link
+                to="/shifts"
+                className={`${
+                  isActiveRoute('/shifts')
+                    ? 'text-stone-900 relative group'
+                    : 'hover:text-stone-900 transition-colors duration-200'
+                }`}
+              >
+                Ca Làm
+                {isActiveRoute('/shifts') && (
+                  <span className="absolute -bottom-[22px] left-0 right-0 h-[2px] bg-amber-600 rounded-t-md" />
+                )}
+              </Link>
             </nav>
 
             {/* Vùng bên phải: Thông báo + Profile */}

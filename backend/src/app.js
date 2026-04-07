@@ -37,6 +37,9 @@ const reportRoutes       = require('./routes/reportRoutes');
 const uploadRoutes       = require('./routes/uploadRoutes');
 const notificationRoutes = require('./routes/notificationRoutes'); // ✨ Route thông báo
 const paymentRoutes      = require('./routes/paymentRoutes');      // ✨ Route thanh toán
+const promotionRoutes    = require('./routes/promotionRoutes');    // ✨ Route khuyến mãi
+const inventoryRoutes    = require('./routes/inventoryRoutes');    // ✨ Route quản lý kho
+const shiftRoutes        = require('./routes/shiftRoutes');        // ✨ Route ca làm việc
 
 // ---- KHỞI TẠO EXPRESS APP ----
 const app = express();
@@ -76,6 +79,9 @@ app.use('/api/reports',       reportRoutes);
 app.use('/api/upload',        uploadRoutes);     // Route upload ảnh Cloudinary
 app.use('/api/notifications', notificationRoutes); // ✨ Route hệ thống thông báo
 app.use('/api/payments',      paymentRoutes);      // ✨ Route thanh toán
+app.use('/api/promotions',    promotionRoutes);    // ✨ Route khuyến mãi/mã giảm giá
+app.use('/api/inventory',     inventoryRoutes);    // ✨ Route quản lý nguyên liệu/kho
+app.use('/api/shifts',        shiftRoutes);        // ✨ Route ca làm việc/chấm công
 
 
 // ---- HANDLE 404 - ROUTE KHÔNG TỒN TẠI ----

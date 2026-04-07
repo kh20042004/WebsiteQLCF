@@ -31,5 +31,20 @@ router.post('/login', authController.login);
 // GET /api/auth/me — Người dùng xem thông tin tài khoản của chính mình
 router.get('/me', authenticate, authController.getProfile);
 
+// ---- LẤY DANH SÁCH TẤT CẢ NHÂN VIÊN (CHỈ ADMIN) ----
+// GET /api/auth/users — Admin lấy DS nhân viên (dùng cho dropdown xếp ca)
+router.get('/users', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const User = require('../models/User');
+        const users = await User.find({}).select('name email role').sort({ name: 1 });
+        res.status(200).json({
+            status: true,
+            data: users
+        });
+    } catch (error) {
+        res.status(500).json({ status: false, message: error.message });
+    }
+});
+
 // Export router
 module.exports = router;
